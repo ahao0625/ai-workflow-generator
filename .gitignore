@@ -1,0 +1,38 @@
+# ── OS / 操作系统 ──────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ── Editor / 编辑器 ────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# ── Python / Python ───────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# ── Node / Node.js ───────────────────────────────────────────
+node_modules/
+package-lock.json
+yarn.lock
+
+# ── Test Outputs / 测试输出（本地验证产物）─────────────────────
+test_outputs/
+*.log
+
+# ── Secrets / 密钥 ────────────────────────────────────────────
+.env
+.env.local
+*.pem
+*.key

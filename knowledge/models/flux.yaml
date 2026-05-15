@@ -1,0 +1,226 @@
+# Flux Model Rules / Flux 模型规则
+# Covers: Flux.1-dev, Flux.1-schnell, Flux.1-Fill, Flux.1-Canny, Flux.1-Depth
+# 涵盖: Flux.1全系列（标准精度、fp8量化、GGUF量化）
+
+model_family: flux
+
+# ── ARCHITECTURE / 架构 ──────────────────────────────────────────
+architecture:
+  base_resolution: 1024
+  latent_channels: 16   # double that of SD
+  vae_scale_factor: 8
+  clip:
+    clip_l: "ViT-L/14 text encoder"
+    t5xxl: "T5-XXL text encoder (4.9B params)"
+  text_encoders: 2   # BOTH required
+  guidance_type: "FluxGuidance node (NOT cfg in KSampler)"
+  cfg_in_ksampler: 1.0   # always 1, guidance comes from FluxGuidance
+  negative_prompt: false  # NOT supported / 不支持负向提示词
+  prediction_type: flow_matching
+
+# ── VARIANTS / 变体 ──────────────────────────────────────────────
+variants:
+  flux1_dev:
+    description: "Full quality, 12B params, requires license / 完整质量，需许可协议"
+    source: "https://huggingface.co/black-forest-labs/FLUX.1-dev"
+    steps: 20
+    guidance: 3.5
+    sampler: euler
+    scheduler: simple
+    commercial: false   # non-commercial license
+
+  flux1_schnell:
+    description: "Distilled, 1-4 steps, Apache 2.0 / 蒸馏版，1-4步，Apache许可"
+    source: "https://huggingface.co/black-forest-labs/FLUX.1-schnell"
+    steps: 4
+    guidance: 1.0
+    sampler: euler
+    scheduler: simple
+    commercial: true
+
+  flux1_fill:
+    description: "Inpainting / outpainting specialist / 专用局部重绘"
+    source: "https://huggingface.co/black-forest-labs/FLUX.1-Fill-dev"
+    special_node: FluxFillConditioning
+    note: "Requires different conditioning setup / 需要特殊conditioning节点"
+
+  flux1_canny:
+    description: "Built-in Canny ControlNet / 内置Canny控制"
+    source: "https://huggingface.co/black-forest-labs/FLUX.1-Canny-dev"
+    note: "No external ControlNet needed / 无需外部ControlNet节点"
+
+  flux1_depth:
+    description: "Built-in Depth ControlNet / 内置深度图控制"
+    source: "https://huggingface.co/black-forest-labs/FLUX.1-Depth-dev"
+
+# ── QUANTIZED VERSIONS / 量化版本 ────────────────────────────────
+quantization:
+  fp8:
+    filename_pattern: "flux1-dev-fp8.safetensors"
+    loader: UNETLoader   # standard loader works for fp8
+    vram_gb: 16
+    quality: "Near identical to fp16 / 近似fp16质量"
+    source: "https://huggingface.co/Comfy-Org/flux1-dev"
+
+  gguf:
+    filename_pattern: "flux1-dev-Q4_K_M.gguf"
+    loader: UnetLoaderGGUF   # requires ComfyUI-GGUF custom node
+    vram_gb: 8-12
+    quality: "Slight degradation depending on quantization level"
+    source: "https://huggingface.co/city96/FLUX.1-dev-gguf"
+    clip_note: "Use CLIPLoaderGGUF for GGUF CLIP files if available"
+    custom_node: "ComfyUI-GGUF"
+    custom_node_url: "https://github.com/city96/ComfyUI-GGUF"
+
+  nf4:
+    filename_pattern: "flux1-dev-nf4.safetensors"
+    loader: CheckpointLoaderSimple  # bitsandbytes required in some setups
+    vram_gb: 8
+
+# ── REQUIRED SUPPORTING MODELS / 必需配套模型 ────────────────────
+required_models:
+  vae:
+    name: "ae.safetensors"
+    path: "models/vae/"
+    source: "https://huggingface.co/black-forest-labs/FLUX.1-dev/blob/main/ae.safetensors"
+    note: "Flux uses its own VAE (ae.safetensors), NOT SD VAE / Flux使用专属VAE"
+
+  clip_l:
+    name: "clip_l.safetensors"
+    path: "models/clip/"
+    source: "https://huggingface.co/comfyanonymous/flux_text_encoders"
+
+  t5xxl:
+    name: "t5xxl_fp16.safetensors"   # or fp8 variant for less VRAM
+    path: "models/clip/"
+    source: "https://huggingface.co/comfyanonymous/flux_text_encoders"
+    fp8_variant: "t5xxl_fp8_e4m3fn.safetensors"
+    note: >
+      T5-XXL fp16 requires ~10GB VRAM. Use fp8 variant (t5xxl_fp8_e4m3fn)
+      to save ~5GB VRAM with minimal quality loss.
+      T5-XXL fp16需约10GB显存，fp8变体可节省~5GB显存且质量损失极小。
+
+# ── COMFYUI NODE GRAPH (fp8/fp16) / ComfyUI节点图（标准精度）───
+comfyui_nodes:
+
+  txt2img_standard:
+    description: "Flux dev/schnell fp8 or fp16 txt2img / 标准精度文生图"
+    nodes:
+      1:
+        class_type: UNETLoader
+        title: "Load Flux UNET / 加载Flux UNET"
+        inputs:
+          unet_name: "flux1-dev-fp8.safetensors"
+          weight_dtype: "fp8_e4m3fn"   # or "default" for fp16
+        outputs: [MODEL]
+
+      2:
+        class_type: DualCLIPLoader
+        title: "Load Dual CLIP (clip_l + t5xxl)"
+        inputs:
+          clip_name1: "t5xxl_fp8_e4m3fn.safetensors"
+          clip_name2: "clip_l.safetensors"
+          type: "flux"
+        outputs: [CLIP]
+
+      3:
+        class_type: VAELoader
+        title: "Load Flux VAE"
+        inputs:
+          vae_name: "ae.safetensors"
+        outputs: [VAE]
+
+      4:
+        class_type: CLIPTextEncode
+        title: "Flux Prompt / Flux提示词"
+        inputs:
+          clip: [2, 0]
+          text: "{positive_prompt}"
+        outputs: [CONDITIONING]
+        note: "Flux uses single unified prompt — no negative / 单一提示词，无负向"
+
+      5:
+        class_type: FluxGuidance
+        title: "Flux Guidance / Flux引导强度"
+        inputs:
+          conditioning: [4, 0]
+          guidance: 3.5    # 1.0 for schnell / schnell用1.0
+        outputs: [CONDITIONING]
+
+      6:
+        class_type: EmptySD3LatentImage
+        title: "Empty Latent (Flux 16ch)"
+        inputs:
+          width: "{width}"
+          height: "{height}"
+          batch_size: "{batch_size}"
+        outputs: [LATENT]
+        note: "Use EmptySD3LatentImage for 16-channel latent / Flux用16通道潜空间"
+
+      7:
+        class_type: KSampler
+        title: "KSampler (cfg=1 for Flux)"
+        inputs:
+          model: [1, 0]
+          positive: [5, 0]
+          negative: [5, 0]   # same as positive — Flux ignores negative
+          latent_image: [6, 0]
+          seed: "{seed}"
+          steps: 20           # 4 for schnell
+          cfg: 1.0            # ALWAYS 1.0 for Flux
+          sampler_name: "euler"
+          scheduler: "simple"
+          denoise: 1.0
+        outputs: [LATENT]
+
+      8:
+        class_type: VAEDecode
+        inputs:
+          samples: [7, 0]
+          vae: [3, 0]
+        outputs: [IMAGE]
+
+      9:
+        class_type: SaveImage
+        inputs:
+          images: [8, 0]
+          filename_prefix: "Flux"
+        outputs: []
+
+  txt2img_gguf:
+    description: "Flux GGUF quantized variant / GGUF量化版"
+    diff_from_standard:
+      - "Node 1: class_type → UnetLoaderGGUF (requires ComfyUI-GGUF)"
+      - "Node 1: unet_name → 'flux1-dev-Q4_K_M.gguf'"
+      - "Node 2: optionally use CLIPLoaderGGUF if using GGUF CLIP"
+      - "All other nodes identical"
+    custom_node_required: "ComfyUI-GGUF (https://github.com/city96/ComfyUI-GGUF)"
+
+# ── LORA FOR FLUX / Flux的LoRA ────────────────────────────────────
+lora_notes: >
+  Flux LoRAs use LoraLoader node same as SD models.
+  Chain: UNETLoader → LoraLoader (MODEL only, CLIP optional) → KSampler.
+  Most Flux LoRAs only modify UNET; CLIP weight can be 0.
+  Flux LoRA使用相同的LoraLoader节点，多数仅修改UNET，CLIP权重可设为0。
+
+# ── CONTROLNET FOR FLUX / Flux的ControlNet ──────────────────────
+controlnet_notes: >
+  Flux.1-Canny and Flux.1-Depth are standalone models with built-in control.
+  For standalone Flux.1-dev + external ControlNet, use:
+  - InstantX/FLUX.1-dev-Controlnet-Canny (requires special apply node)
+  - Xlabs-AI/flux-controlnet-collections
+  Node: ControlNetApplyAdvanced works with most Flux CN implementations.
+  Flux有内置CN版本；外部CN模型需对应的特殊节点。
+
+# ── COMMON ISSUES / 常见问题 ─────────────────────────────────────
+common_issues:
+  - symptom: "Black image / 黑图"
+    fix: "Wrong VAE — must use ae.safetensors, not SD VAE / 必须使用ae.safetensors"
+  - symptom: "OOM with T5-XXL / T5加载显存不足"
+    fix: "Use t5xxl_fp8_e4m3fn.safetensors / 使用fp8版T5"
+  - symptom: "UnetLoaderGGUF not found / 找不到GGUF加载器"
+    fix: "Install ComfyUI-GGUF via Manager / 通过Manager安装ComfyUI-GGUF"
+  - symptom: "cfg > 1 produces harsh contrast / cfg>1导致对比度异常"
+    fix: "Flux KSampler cfg MUST be 1.0; use FluxGuidance node for strength / 必须cfg=1"
+  - symptom: "Steps > 4 for schnell is wasted / schnell步数>4无效"
+    fix: "flux1-schnell distilled for max 4 steps / schnell蒸馏版最多4步"

@@ -1,0 +1,405 @@
+# Prompt-Only Renderer / 纯提示词渲染器
+# Maps IR → optimized prompt text for Midjourney, DALL·E, Ideogram, etc.
+# 将 IR 映射为 Midjourney、DALL·E、Ideogram 等平台的优化提示词文本
+
+platform: prompt_only
+output_formats: [prompt.txt, dependencies.md]
+supported_platforms: [midjourney, dalle, ideogram, generic]
+
+# ── RENDERING OVERVIEW / 渲染概述 ──────────────────────────────
+overview: >
+  Prompt-only platforms do not accept technical parameters (sampler, CFG, etc.).
+  All control must be embedded in the natural language prompt.
+  Style, composition, lighting, and "vibes" matter more than technical specs.
+  The renderer translates IR technical choices into natural-language equivalents.
+  /
+  纯提示词平台不接受技术参数（采样器、CFG等），所有控制必须嵌入自然语言提示词中。
+  风格、构图、光影、"氛围感"比技术参数更重要。
+  渲染器将IR技术选项翻译为自然语言等价描述。
+
+# ── PLATFORM CAPABILITY DIFFERENCES / 平台能力差异 ──────────────
+capabilities:
+  midjourney:
+    resolution: 1024x1024 default, upscale-able
+    style_params: ["--style raw", "--stylize", "--chaos", "--weird", "--ar"]
+    negative_prompt: "--no param (e.g. --no blur, --no text)"
+    lora: "NOT SUPPORTED — use style references instead (--sref URL)"
+    controlnet: "NOT SUPPORTED — use image prompts with --iw (image weight)"
+    ipadapter: "NOT SUPPORTED — use --cref (character reference)"
+    hires_fix: "Built-in upscale: U1-U4 buttons, followed by zoom/subtle/creative"
+    video: "NOT SUPPORTED (image only)"
+    batch: "--repeat N parameter"
+    seed: "--seed N for reproducible / --sref random for variety"
+    model_versions: ["--v 6.1", "--v 7", "--niji 6"]
+    turbo_mode: "--turbo (faster, lower quality)"
+  dalle:
+    resolution: "1024x1024 / 1792x1024 / 1024x1792"
+    style_params: "Natural language only (no flag system)"
+    negative_prompt: "NOT directly supported; describe what you want, not what you don't want"
+    lora: "NOT SUPPORTED"
+    controlnet: "NOT SUPPORTED — use edit API with mask"
+    ipadapter: "NOT SUPPORTED"
+    hires_fix: "NOT needed — DALL·E 3 outputs at native resolution"
+    video: "NOT SUPPORTED"
+    batch: "n=1-10 parameter in API"
+    seed: "Not exposed in DALL·E 3"
+    note: "DALL·E 3 auto-enhances prompts; provide clear subject descriptions"
+    prompt_length_limit: 4000 chars (GPT-4o), 1000 chars (DALL·E 2)
+  ideogram:
+    resolution: "1024x1024 / 1280x768 / 768x1280"
+    style_params: "Natural language + style tag dropdown in UI"
+    negative_prompt: "negative_prompt API parameter"
+    magic_prompt: "auto-enhance option (auto_prompt=true)"
+    note: "Ideogram is strong at text-in-image rendering"
+
+# ── PROMPT OPTIMIZATION RULES / 提示词优化规则 ──────────────────
+optimization:
+
+  # --- Resolution embedding / 分辨率传达 ---
+  resolution:
+    sd15_equivalent: >
+      SD1.5 (512px) is equivalent to "standard resolution, slightly soft details".
+      When translating to prompt-only, ignore resolution — these platforms auto-scale.
+      Instead, focus on composition: "close-up portrait" vs "wide landscape".
+      SD1.5(512px)等价于标准分辨率；在提示词平台忽略分辨率，转而关注构图描述。
+    sdxl_equivalent: >
+      SDXL (1024px) is equivalent to native Midjourney/DALL·E resolution.
+      No special translation needed. Match the native output quality.
+      SDXL(1024px)等价于Midjourney/DALL·E原生分辨率，无需特殊翻译。
+    flux_equivalent: >
+      Flux quality is comparable to Midjourney v6/DALL·E 3.
+      Add "highly detailed, sharp focus" to approach Flux-level detail.
+      Flux质量可比Midjourney v6/DALL·E 3，添加高细节标签。
+
+  # --- Sampler translation / 采样器翻译为自然语言 ---
+  sampler_to_style:
+    translation_note: >
+      If the user's original workflow specified a sampler+scheduler (e.g. dpmpp_2m+karras),
+      this is not directly translatable to prompt-only platforms.
+      Instead, use quality/convergence descriptors:
+    euler_ancestral: "slightly textured, organic noise pattern"
+    dpmpp_2m_karras: "smooth, clean render"
+    ddim: "sharp, crisp"
+    lcm: "light, airy, slightly soft"
+    default: "(no impact — native platform sampling is superior)"
+
+  # --- Steps → quality descriptors / 步数→质量 ---
+  steps_to_quality:
+    high_steps_30plus: "hyper-detailed, intricate, elaborate"
+    mid_steps_20: "detailed"
+    low_steps_under10: "sketch-like, rough, impressionistic"
+
+  # --- CFG → creativity descriptors / CFG→创意度 ---
+  cfg_to_creativity:
+    high_cfg_10plus: "highly literal, strictly following description, photorealistic if realistic"
+    mid_cfg_7: "balanced"
+    low_cfg_under3: "creative, interpretative, abstract, fantastical"
+
+  # --- Style tag injection / 风格标签注入 ---
+  style_mapping:
+    photographic: "photorealistic, 8k, award-winning photograph, shot on Hasselblad, natural lighting"
+    anime: "anime style, studio ghibli, makoto shinkai, vibrant cel shading"
+    painting: "oil painting, impasto, Caravaggio lighting, classical masterpiece"
+    digital_art: "digital art, trending on ArtStation, CGSociety, sharp focus"
+    cinematic: "cinematic lighting, anamorphic lens, depth of field, film grain, 35mm"
+    illustration: "detailed illustration, storybook, watercolor, ink line art"
+    three_d: "3D render, octane render, unreal engine 5, physically based rendering, subsurface scattering"
+    pixel_art: "pixel art, 16-bit, retro game, sprite"
+
+  # --- Quality tag injection / 质量标签注入 ---
+  quality_tags:
+    midjourney: ""   # Midjourney doesn't need quality tags; it degrades quality
+    dalle: "A high-quality detailed image of"   # prefix
+    ideogram: ""
+    generic: "masterpiece, best quality, ultra detailed"
+  midjourney_note: >
+    Do NOT prefix Midjourney prompts with "masterpiece, best quality" etc.
+    Midjourney performs worse with quality-tag spam.
+    Instead use style parameters: --stylize 250 (default) or higher for detail.
+    Midjourney提示词不要加"masterpiece"等质量标签，会降低质量。
+    使用--stylize参数控制细节程度。
+
+# ── MIDJOURNEY PROMPT ENGINE / Midjourney提示词引擎 ─────────────
+midjourney_prompt_engine:
+  structure: |
+    [subject + action/scene] — [environment/lighting] — [style keywords] — [parameters]
+
+    Example:
+    A serene mountain lake at golden hour, mist rising from water,
+    surrounded by pine forests, reflections on still water
+    --ar 16:9 --style raw --stylize 150 --v 6.1
+  weight_syntax:
+    multi_prompt: "::"  # e.g. "dog::2 cat::1" = dog twice as important
+    negative_weight: "::-.5"  # deemphasize
+  parameters:
+    aspect_ratio:
+      source: "Convert IR width/height to nearest standard ratio"
+      mapping:
+        "512x512 / 1024x1024": "--ar 1:1"
+        "768x512 / 1344x896":  "--ar 3:2"
+        "768x1024 / 1024x768": "--ar 4:3"  # approximate
+        "512x768 / 896x1152":  "--ar 2:3"
+        "1024x576 / 1344x768": "--ar 16:9"
+        "576x1024 / 768x1344": "--ar 9:16"
+    stylize:
+      default: "--stylize 100"
+      high_detail: "--stylize 250"   # maps to high-steps workflows
+      raw: "--style raw"             # maps to CFG 7+ (precise following)
+    chaos:
+      default: 0
+      creative: "--chaos 20"         # maps to low CFG
+      very_creative: "--chaos 50"
+    weird:
+      default: 0
+      experimental: "--weird 500"    # for unusual aesthetics
+    no_param:
+      mapping:
+        blur: "--no blur"
+        text: "--no text"
+        watermark: ""
+        worst_quality: ""
+      note: "Use --no param (max 1-2 items); translate negative prompt keywords"
+    seed: "--seed {seed} (for reproducibility)"
+    repeat: "--repeat {batch_size}"
+    model: "--v 6.1 / --v 7 / --niji 6"
+    turbo: "--turbo (optional, fast mode)"
+
+  image_reference:
+    prompt: "{url} descriptive text --iw {image_weight}"   # 0.5-2.0 range
+    control_equivalent: >
+      Image prompts with --iw are the closest Midjourney equivalent to ControlNet.
+      Low --iw (0.5) = loose guidance; High --iw (2.0) = strict structural copy.
+
+  character_reference:
+    cref: "--cref {url}"        # character reference
+    cw: "--cw {0-100}"          # character weight (0=face only, 100=full body)
+
+  style_reference:
+    sref: "--sref {url}"         # style reference (LoRA equivalent)
+    sw: "--sw {0-1000}"          # style weight (100=default)
+    multiple_srefs: "--sref url1 url2 --sw 100,50"
+
+  lora_equivalent: >
+    Midjourney lacks LoRA. Use --sref (style reference) + --cref (character reference)
+    instead. For texture/style changes, use multi-prompt weights: "textured::1.5 smooth::0.5"
+
+  flux_equivalent: >
+    Flux has superior text rendering. For Midjourney text-in-image, explicitly request:
+    "the word 'HELLO' written in neon letters on a wall" (Midjourney is weaker at text).
+    Flux的文字渲染优于Midjourney，如需文字效果需在提示词中明确要求。
+
+# ── DALL·E PROMPT ENGINE / DALL·E提示词引擎 ────────────────────
+dalle_prompt_engine:
+  structure: |
+    [A high-quality detailed image of] [subject] [in a/an] [scene/setting] [with] [lighting/atmosphere] [.] [style reference]
+
+    Example:
+    A high-quality detailed image of a serene mountain lake at golden hour,
+    with mist rising from the water, surrounded by pine forests, in the
+    style of atmospheric landscape photography.
+  best_practices:
+    - "Use complete sentences / 使用完整句子"
+    - "Describe what you WANT, not what you DON'T want / 描述你想要的，而非你不想要的"
+    - "DALL-E 3 auto-enhances; keep prompts concise (<4000 chars) / DALL·E 3自动增强，保持简洁"
+    - "Avoid negative language; DALL-E may misinterpret / 避免否定语言"
+    - "Specify art medium: photo, painting, digital art, etc. / 指定艺术媒介"
+  dalle2_legacy:
+    note: "DALL·E 2 requires shorter prompts, simpler descriptions"
+    limit: "~1000 chars"
+    format: "Keyword-based: 'oil painting of cat in sunlit room, masterpiece'"
+  size_mapping:
+    "1024x1024": "1024x1024 (square)"
+    "1792x1024": "1792x1024 (wide)"
+    "1024x1792": "1024x1794 (tall)"
+  quality: "hd / standard (API parameter, not in prompt)"
+  negative_prompt_workaround: >
+    DALL·E doesn't support negative prompts. Instead:
+    "A clean, well-composed image of X" (not "X without noise")
+    Focus on what you want, rephrase negatives as positives.
+  style_injection: "in the style of [art movement/photographer/medium]"
+
+# ── IDEOGRAM PROMPT ENGINE / Ideogram提示词引擎 ─────────────────
+ideogram_prompt_engine:
+  structure: |
+    [subject description] [,] [style keywords] [,] [composition]
+
+    Example:
+    A serene mountain lake at golden hour, mist rising from water,
+    atmospheric landscape photography, warm lighting, wide angle
+  api_params:
+    prompt: "{optimized_prompt}"
+    negative_prompt: "blurry, text, watermark, low quality"
+    aspect_ratio: "ASPECT_1_1 / ASPECT_16_9 / ASPECT_9_16 / ASPECT_4_3 / ASPECT_3_4"
+    magic_prompt: "AUTO / ON / OFF"
+    style: "GENERAL / REALISTIC / DESIGN / RENDER_3D / ANIME"
+  text_rendering: >
+    Ideogram excels at rendering text in images.
+    If user workflow had text overlay, preserve in prompt.
+    Example: "A storefront with the sign 'OPEN 24 HOURS' in neon letters"
+    Ideogram擅长图片中的文字渲染，保留用户工作流中的文字叠加效果。
+
+# ── GENERIC PROMPT OPTIMIZER / 通用提示词优化器 ─────────────────
+generic_prompt:
+  use_when: "No specific platform detected / 未检测到具体平台"
+  structure: |
+    [quality_prefix], [main subject], [detail description],
+    [environment/background], [lighting], [color palette],
+    [camera/angle], [style/medium], [artist reference]
+  quality_prefixes:
+    realistic: "masterpiece, best quality, ultra detailed, photorealistic, 8k, RAW photo"
+    anime: "masterpiece, best quality, highly detailed, anime style"
+    painting: "masterpiece, highly detailed, sharp focus, artstation trending"
+  negative_prompt_default: "worst quality, low quality, blurry, watermark, text, jpeg artifacts"
+
+# ── CROSS-MODEL TRANSLATION / 跨模型风格翻译 ────────────────────
+cross_model_translation:
+  # When user says "SDXL workflow → Midjourney prompt"
+  source_ir_to_style: |
+    1. Map model_family → target platform capability
+       - SD15/SDXL → Midjourney: equivalent quality, translate LoRA→sref, ControlNet→--iw
+       - Flux → Midjourney: Flux text rendering better, note this to user
+       - SD3 → DALL·E 3: similar quality tier, SD3 allows more technical control
+
+    2. Map pipeline_type → platform support
+       - txt2img → all platforms
+       - img2img → Midjourney (--iw), DALL·E (edit API)
+       - inpaint → DALL·E edit API, Midjourney Vary Region
+       - video → NOT supported by prompt-only platforms; suggest API instead
+
+    3. Map optional modules → equivalent features
+       - LoRA → --sref (Midjourney), style tags (DALL·E)
+       - ControlNet → --iw + reference image (Midjourney)
+       - IPAdapter → --cref (Midjourney)
+       - Face restore → "detailed face, sharp eyes" (prompt-level only)
+
+    4. Warn about irrecoverable losses
+       - Precise seed control: lost (except Midjourney --seed)
+       - Exact steps/cfg tuning: lost (platform auto-tunes)
+       - Batch size: API-specific parameter
+
+# ── PROMPT ASSEMBLY PIPELINE / 提示词组装管道 ──────────────────
+assembly_pipeline:
+  steps:
+    1: detect_target   # midjourney / dalle / ideogram / generic
+    2: extract_ir      # Get prompt, style hints, platform hints from IR
+    3: translate_params # Steps→detail words, CFG→creativity, neg→positive reframe
+    4: inject_style    # Quality tags, style keywords, medium description
+    5: append_params   # Platform-specific flags (--ar, --stylize, etc.)
+    6: final_pass      # Read aloud: does it sound natural? Smooth transitions.
+
+# ── OUTPUT TEMPLATES / 输出模板 ─────────────────────────────────
+output_templates:
+  midjourney: |
+    /imagine prompt: {optimized_prompt} {parameters}
+
+    Suggested params / 建议参数:
+    - {param_list}
+
+  dalle: |
+    --- PROMPT (for DALL·E API or ChatGPT) ---
+    {optimized_prompt}
+
+    --- API Parameters ---
+    {{
+      "model": "dall-e-3",
+      "prompt": "{prompt}",
+      "size": "{size}",
+      "quality": "{quality}",
+      "n": {batch_size}
+    }}
+
+  ideogram: |
+    --- PROMPT ---
+    {optimized_prompt}
+
+    --- NEGATIVE PROMPT ---
+    {negative_prompt}
+
+    --- API Parameters ---
+    aspect_ratio: {aspect_ratio}
+    magic_prompt: AUTO
+    style: {style}
+
+  generic: |
+    === POSITIVE PROMPT / 正向提示词 ===
+    {optimized_prompt}
+
+    === NEGATIVE PROMPT / 负向提示词 ===
+    {negative_prompt}
+
+    === SUGGESTED SETTINGS / 建议设置 ===
+    Resolution: {width}x{height}
+    (Paste prompt into your preferred platform)
+
+# ── QUALITY & SAFETY / 质量与安全 ──────────────────────────────
+quality_checklist:
+  before_output:
+    - "Prompt reads as natural English (or Chinese) / 提示词读起来自然流畅"
+    - "No platform-inappropriate tags (e.g. no 'masterpiece' for Midjourney)"
+    - "Aspect ratio matches user's intent (or closest available)"
+    - "Negative prompt is constructive (describe what's wanted, not what's avoided)"
+    - "No NSFW guardrail tripping words (if platform has filters)"
+
+# ── EDGE CASES / 边界情况 ──────────────────────────────────────
+edge_cases:
+  complex_workflow_to_prompt:
+    handling: >
+      When source workflow has LoRA + ControlNet + IPAdapter, the prompt-only
+      equivalent is a CHOOSE-ONE situation:
+      - Midjourney: --sref (LoRA equivalent) + --iw (ControlNet) + --cref (IPAdapter)
+      - DALL·E: Integrate all details into prompt text + use edit API for reference images
+      - Clearly note losses: "LoRA style can only be approximated. Recommend using
+        --sref with a reference image URL. ControlNet structure is partially preserved
+        via --iw.".
+
+  video_workflow_to_prompt:
+    handling: >
+      PROMPT-ONLY PLATFORMS DO NOT SUPPORT VIDEO GENERATION.
+      Output an error / redirect: "Video generation is not available on Midjourney/DALL·E.
+      Use Replicate API (search: 'cogvideox' or 'animate-diff') or local ComfyUI."
+
+  hires_fix_to_prompt:
+    handling: >
+      Hires.fix/upscale is irrelevant for prompt-only platforms.
+      Midjourney has built-in upscale (U buttons → zoom/subtle/creative).
+      DALL·E outputs at native resolution.
+      Remove any hires-related notes from the final prompt output.
+
+  inpainting_to_prompt:
+    handling: >
+      Midjourney: "Vary (Region)" feature lets you select a region and re-prompt it.
+      DALL·E: Edit API with mask image.
+      For prompt-only: describe the desired CHANGE in the masked area.
+      Example: "Replace the background with a sunset beach scene"
+
+  flux_to_midjourney:
+    handling: >
+      Flux features not available in Midjourney:
+      - Dual CLIP (T5) text understanding: Midjourney has its own text encoder
+      - FluxGuidance: Maps loosely to --stylize
+      - No negative prompt: Midjourney also doesn't use negative prompts (use --no instead)
+      - Text rendering: Flux > Midjourney for text-in-image
+      Note these differences in output for accuracy.
+
+# ── DEPENDENCIES OUTPUT / 依赖输出 ──────────────────────────────
+dependencies_output:
+  midjourney: |
+    No files to download. Requirements:
+    - Midjourney subscription (discord.com or alpha.midjourney.com)
+    - Discord account for standard interface
+    Or: Midjourney Web (alpha)
+
+  dalle: |
+    No files to download. Requirements:
+    - OpenAI API key with DALL·E 3 access
+    - OR ChatGPT Plus subscription (DALL·E via ChatGPT)
+    - pip install openai (for API usage)
+
+  ideogram: |
+    No files to download. Requirements:
+    - Ideogram account (ideogram.ai)
+    - OR Ideogram API key
+
+  generic: |
+    No files to download.
+    Paste the prompt text into your preferred image generation platform.

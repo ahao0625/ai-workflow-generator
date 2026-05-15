@@ -1,0 +1,298 @@
+# A1111 / Forge / SD.Next Renderer / WebUI参数渲染器
+# Maps IR → A1111-compatible params.json and prompt text
+# 将 IR 映射为 A1111 兼容的 params.json 及提示词文本
+
+platform: a1111
+output_formats: [params.json, prompt.txt, dependencies.md]
+variants: [a1111, forge, sdnext]
+
+# ── RENDERING OVERVIEW / 渲染概述 ──────────────────────────────
+overview: >
+  A1111 uses a flat parameter structure (not a node graph).
+  Critical difference: LoRA is embedded in prompt text as <lora:name:weight>,
+  ControlNet lives in a separate extension config, and hires_fix is a two-pass
+  post-processing toggle in the img2img tab (or built-in in Forge).
+  /
+  A1111使用扁平参数结构（非节点图），关键差异：LoRA以<lora:name:weight>
+  嵌入提示词文本，ControlNet存在于独立扩展配置中，hires_fix是img2img标签
+  页中的两阶段后处理开关（Forge版内置）。
+
+# ── PLATFORM CAPABILITY MATRIX / 平台能力矩阵 ──────────────────
+capabilities:
+  txt2img:        all_variants
+  img2img:        all_variants
+  inpaint:        all_variants (dedicated tab / 独立标签页)
+  lora:           embedded in prompt / 嵌入提示词
+  controlnet:     extension required (sd-webui-controlnet)
+  ipadapter:      extension (sd-webui-ip-adapter)
+  hires_fix:      built-in txt2img toggle
+  face_restore:   built-in (CodeFormer/GFPGAN toggle)
+  upscale:        extras tab / extras标签页
+  batch:          built-in batch count/size
+  animatediff:    extension (sd-webui-animatediff)
+  video_output:   NOT natively supported; use extension or post-process
+
+# ── IR → A1111 PARAM MAPPING / IR到A1111参数映射 ────────────────
+param_mapping:
+
+  # --- Basic generation / 基本生成参数 ---
+  prompt:
+    source: ir.prompt
+    format: "pure string / 纯文本"
+    lora_embedding: >
+      If IR has loras, append each LoRA to prompt as:
+      <lora:{name}:{weight_model}>
+      Example: "masterpiece, best quality, <lora:add_detail:0.8> <lora:epiNoiseoffset_v2:0.6>"
+      Per R16: this is the REQUIRED syntax for A1111 LoRA.
+      LoRA in negative prompt also possible: append to negative_prompt if needed.
+    embedding_trigger: >
+      If prompt mentions known embeddings by name, use trigger-word format.
+      Example: "by bad-artist" (triggers the bad-artist embedding).
+
+  negative_prompt:
+    source: ir.negative_prompt
+    format: "pure string / 纯文本"
+    default_if_empty: "worst quality, low quality, blurry"
+    flux_note: "Flux does NOT support negative prompt in A1111 Forge either — omit entirely"
+
+  # --- Sampling / 采样参数 ---
+  sampler_name:
+    source: ir.sampler_name
+    translation:
+      euler:            "Euler"
+      euler_ancestral:  "Euler a"
+      dpmpp_2m:         "DPM++ 2M"
+      dpmpp_2m_sde:     "DPM++ 2M SDE"
+      dpmpp_3m_sde:     "DPM++ 3M SDE"
+      dpmpp_2s_ancestral: "DPM++ 2S a"
+      ddim:             "DDIM"
+      uni_pc:           "UniPC"
+      lcm:              "LCM"
+      heun:             "Heun"
+    scheduler_included: true  # A1111 combines sampler + scheduler in name
+    example: "DPM++ 2M Karras"
+
+  steps:
+    source: ir.steps
+
+  cfg_scale:
+    source: ir.cfg
+
+  seed:
+    source: ir.seed
+    a1111_value: "{seed}"   # -1 = random, or specific int
+
+  width:
+    source: ir.width
+    constraint: "Must be divisible by 8 (R17) / 必须是8的倍数"
+    rounding: "Round to nearest multiple of 8 / 取最接近8的倍数"
+    sd15_optimal_range: "[512, 768]"
+
+  height:
+    source: ir.height
+    constraint: "Must be divisible by 8 (R17)"
+
+  denoising_strength:
+    source: ir.denoise
+    applies_when: img2img_or_inpaint
+
+  batch_size:
+    source: ir.batch_size
+
+  restore_faces:
+    source: ir.face_restore.enabled
+    mapping: true_if_enabled
+
+  # --- Model selection / 模型选择 ---
+  override_settings:
+    sd_model_checkpoint: "({model_name})"
+    sd_vae: "({vae_model_name})"
+    CLIP_stop_at_last_layers: "({clip_skip})"
+
+  # --- Hires fix / 高清修复 ---
+  hires_fix:
+    enabled: true_if_ir.hires_fix.enabled
+    hires_upscaler: "{upscale_method}"  # e.g. "Latent (nearest-exact)" or "4x-UltraSharp"
+    hires_steps: "{ir.hires_fix.steps or 15}"
+    hires_denoising_strength: "{ir.hires_fix.denoise or 0.45}"
+    hires_upscale: "{ir.hires_fix.upscale_by or 2.0}"
+    hires_resize_width: 0   # 0 = auto from upscale factor
+    hires_resize_height: 0
+
+  # --- Clip skip / CLIP跳过层 ---
+  clip_skip:
+    default: 1
+    anime_recommendation: 2
+
+# ── CONTROLNET EXTENSION / ControlNet扩展配置 ──────────────────
+controlnet_config:
+  engine: "sd-webui-controlnet"
+  structure: >
+    Each ControlNet unit is a separate object in "alwayson_scripts"."controlnet"."args".
+    Indexed: ControlNet-0, ControlNet-1, ControlNet-2 (max 3 in standard UI).
+  unit_format:
+    enabled: true
+    module: "{preprocessor_name}"
+    model: "{controlnet_model_filename}"
+    weight: "{strength}"
+    guidance_start: "{start_percent}"
+    guidance_end: "{end_percent}"
+    pixel_perfect: true
+    resize_mode: "Resize and Fill"
+    control_mode: "Balanced"  # vs "My prompt is more important" / "ControlNet is more important"
+  preprocessor_translation:
+    none:           "none"
+    openpose:       "openpose_full"
+    dwpose:         "dw_openpose_full"
+    canny:          "canny"
+    hed:            "hed"
+    lineart:        "lineart_standard"
+    anime_lineart:  "lineart_anime"
+    depth_midas:    "depth_midas"
+    depth_zoe:      "depth_zoe"
+    depth_anything: "depth_anything_v2"
+    normal_map:     "normal_bae"
+    tile:           "tile_resample"
+    scribble:       "scribble_hed"
+    softedge:       "softedge_pidinet"
+    shuffle:        "shuffle"
+    seg:            "seg_ufade20k"
+  input_image:
+    type: "file path"   # user uploads to ControlNet tab
+    note: "Instruct user to upload {image} to ControlNet unit / 指导用户上传图片到ControlNet单元"
+
+# ── IPADAPTER EXTENSION / IPAdapter扩展配置 ─────────────────────
+ipadapter_config:
+  engine: "sd-webui-ip-adapter"
+  structure: "Integrated into ControlNet panel as model selection"
+  note: >
+    In A1111, IPAdapter is loaded as a ControlNet model type, not a separate panel.
+    Select IP-Adapter model in ControlNet model dropdown.
+    Use "reference" preprocessor or "none" for preprocessed images.
+    IPAdapter in A1111通过ControlNet面板的模型下拉选择，非独立面板。
+
+# ── FACE RESTORE / 人脸修复 ─────────────────────────────────────
+face_restore_config:
+  enabled: true_if_ir.face_restore
+  face_restoration_model:
+    mapping:
+      codeformer: "CodeFormer"
+      gfpgan: "GFPGAN"
+      restoreformer: "CodeFormer"  # fallback: A1111 uses CodeFormer primarily
+  codeformer_weight: "{ir.face_restore.fidelity}"  # 0.0=full restore, 1.0=keep original
+
+# ── OUTPUT FORMAT (params.json) / 输出格式 ──────────────────────
+params_json_structure:
+  prompt: "{full_prompt_with_loras}"
+  negative_prompt: "{negative_prompt}"
+  sampler_name: "{translated_sampler_name}"
+  steps: "{steps}"
+  cfg_scale: "{cfg}"
+  seed: "{seed}"
+  width: "{width}"
+  height: "{height}"
+  denoising_strength: "{denoise}"
+  batch_size: "{batch_size}"
+  restore_faces: "{face_restore_enabled}"
+  override_settings:
+    sd_model_checkpoint: "{ckpt_name}"
+    sd_vae: "{vae_name}"
+    CLIP_stop_at_last_layers: "{clip_skip}"
+  enable_hr: "{hires_enabled_boolean}"
+  hr_upscaler: "{hires_upscaler}"
+  hr_second_pass_steps: "{hires_steps}"
+  hr_denoising_strength: "{hires_denoise}"
+  hr_scale: "{hires_upscale}"
+  alwayson_scripts:
+    controlnet:
+      args: "[{controlnet_units_array}]"
+
+# ── PROMPT ASSEMBLY RULES / 提示词组装规则 ──────────────────────
+prompt_assembly:
+  order:
+    1: quality_tags     # masterpiece, best quality, etc.
+    2: subject          # main subject description
+    3: scene_context    # environment, lighting, composition
+    4: style_tags       # art style, medium
+    5: lora_triggers    # LoRA trigger words (if any)
+    6: lora_syntax      # <lora:name:weight> (if any)
+  quality_tag_sets:
+    realistic:  "masterpiece, best quality, ultra detailed, photorealistic"
+    anime:      "masterpiece, best quality, highly detailed"
+    painting:   "masterpiece, highly detailed, sharp focus"
+  weight_syntax: >
+    A1111 supports (word:weight) syntax for emphasis.
+    Example: "(red dress:1.2), [blue sky:0.8]"
+    Can be used to fine-tune prompt attention.
+
+# ── FORGE-SPECIFIC DIFFERENCES / Forge版本差异 ──────────────────
+forge_notes:
+  advantages:
+    - "Hires.fix as single pass (no separate img2img step) / 单步高清修复"
+    - "Better VRAM management / 更好的显存管理"
+    - "Flux support out-of-box / 原生支持Flux"
+    - "UnetPatcher for efficient LoRA loading / UnetPatcher高效LoRA"
+  flux_config: >
+    Forge is the primary A1111 variant for Flux.
+    Uses "Flux" diffusion scheme, not "k-diffusion".
+    Guidance strength in "Diffusion in Low Bits" settings, not cfg_scale.
+
+# ── PARAMS.JSON LOADING / params.json加载方式 ───────────────────
+loading:
+  txt2img:
+    method: "PNG Info → Send to txt2img, OR drag params.json into webui / 拖拽params.json至webui"
+  importing_controlnet:
+    method: "ControlNet parameters are stored in alwayson_scripts; load image separately"
+    note: "User must manually load the input image for each ControlNet unit / 用户需手动为每个ControlNet加载输入图"
+
+# ── EDGE CASES / 边界情况 ──────────────────────────────────────
+edge_cases:
+  no_negative_for_flux:
+    handling: >
+      If model_family is flux, omit negative_prompt entirely.
+      A1111 Forge respects this; generates without negative conditioning.
+      Add note to user: "Flux doesn't use negative prompts — field left empty."
+
+  sdxl_turbo_lightning:
+    handling: >
+      For SDXL Turbo/Lightning: set steps=4, cfg_scale=1.0, sampler="DPM++ SDE".
+      Disable negative prompt for Turbo variants.
+      Add note: "Low-step model — do not increase steps or cfg."
+
+  multiple_loras:
+    handling: >
+      Append all LoRAs to prompt in order: <lora:name1:weight1> <lora:name2:weight2> ...
+      A1111 processes them from left to right.
+      Trigger words precede LoRA tags.
+
+  hires_fix_with_controlnet:
+    handling: >
+      ControlNet applies to hires pass in Forge (auto).
+      In standard A1111, ControlNet only applies to first pass.
+      Use "Upscale" latent for hires; ControlNet image auto-resizes.
+
+  regional_prompter:
+    handling: >
+      For regional prompting, A1111 uses sd-webui-regional-prompter extension.
+      Format: "ADDCOL/ADDROW/BREAK" separators in prompt.
+      Document extension dependency in usage notes.
+
+  animatediff_via_extension:
+    handling: >
+      AnimateDiff is available as sd-webui-animatediff extension.
+      Output params include "animatediff_enable": true and motion module settings.
+      Not all motion LoRAs are A1111-compatible — validate before output.
+
+# ── DEPENDENCIES OUTPUT / 依赖输出 ──────────────────────────────
+dependencies_output:
+  format: |
+    Models to download first / 请先下载以下模型:
+    - Checkpoint: {ckpt_name}  [URL]
+    - VAE: {vae_name}          [URL]
+    {for each LoRA}:
+    - LoRA: {lora_name}        [URL]
+    {for each ControlNet}:
+    - ControlNet: {cn_model}   [URL]
+    Extensions required / 所需扩展:
+    - sd-webui-controlnet
+    - {other extensions}

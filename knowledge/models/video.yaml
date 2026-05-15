@@ -1,0 +1,160 @@
+# Video Generation Models / 视频生成模型规则
+# Covers: AnimateDiff, SVD, CogVideoX, Wan2.1, HunyuanVideo, Mochi
+
+model_family: video
+
+# ══════════════════════════════════════════════════════════════
+# ANIMATEDIFF / AnimateDiff动画扩散
+# ══════════════════════════════════════════════════════════════
+animatediff:
+  description: "Animate SD1.5/SDXL outputs as video frames / 将SD图像动画化为视频帧"
+  base_model: sd15 or sdxl
+  custom_node: "ComfyUI-AnimateDiff-Evolved"
+  custom_node_url: "https://github.com/Kosinkadink/ComfyUI-AnimateDiff-Evolved"
+
+  motion_models:
+    - name: "mm_sd_v15_v2.ckpt"
+      base: sd15
+      source: "https://huggingface.co/guoyww/animatediff"
+    - name: "v3_sd15_mm.ckpt"
+      base: sd15
+    - name: "mm_sdxl_v10_beta.ckpt"
+      base: sdxl
+
+  defaults:
+    context_length: 16    # frames per window / 每窗口帧数
+    context_stride: 1
+    context_overlap: 4
+    fps: 8
+    total_frames: 16
+
+  comfyui_key_nodes:
+    AnimateDiffLoaderWithContext:
+      inputs: [model_name, beta_schedule, context_options]
+      outputs: [MODEL]
+      note: "Wraps base model with motion module / 在基础模型上添加运动模块"
+
+    ADE_AnimateDiffUniformContextOptions:
+      inputs: [context_length, context_stride, context_overlap, closed_loop]
+      outputs: [CONTEXT_OPTIONS]
+
+    VHS_VideoCombine:
+      inputs: [images, frame_rate, loop_count, filename_prefix, format]
+      outputs: [VHS_FILENAMES]
+      note: "Requires VideoHelperSuite / 需要VideoHelperSuite插件"
+      custom_node: "ComfyUI-VideoHelperSuite"
+
+  workflow_pattern: >
+    CheckpointLoader → AnimateDiffLoaderWithContext → LoraLoader(opt) →
+    CLIPTextEncode×2 → KSampler → VAEDecode → VHS_VideoCombine
+
+# ══════════════════════════════════════════════════════════════
+# STABLE VIDEO DIFFUSION (SVD) / 稳定视频扩散
+# ══════════════════════════════════════════════════════════════
+svd:
+  description: "Image-to-video, Stability AI / 图生视频"
+  pipeline_type: img2vid
+  source: "https://huggingface.co/stabilityai/stable-video-diffusion-img2vid-xt"
+  models:
+    - "svd.safetensors (14 frames)"
+    - "svd_xt.safetensors (25 frames, recommended)"
+
+  defaults:
+    frames: 25
+    fps: 6
+    steps: 25
+    cfg: 2.5
+    augmentation_level: 0.0   # motion intensity / 运动强度
+    min_cfg: 1.0
+
+  comfyui_key_nodes:
+    ImageOnlyCheckpointLoader: loads SVD model
+    SVD_img2vid_Conditioning:
+      inputs: [clip_vision, init_image, vae, width, height, video_frames, fps, augmentation_level]
+      outputs: [positive, negative, latent]
+    VideoLinearCFGGuidance:
+      inputs: [model, min_cfg]
+      outputs: [MODEL]
+
+  workflow_pattern: >
+    LoadImage → ImageOnlyCheckpointLoader → SVD_img2vid_Conditioning →
+    VideoLinearCFGGuidance → KSampler → VAEDecode → VHS_VideoCombine
+
+# ══════════════════════════════════════════════════════════════
+# WAN 2.1 / 万象2.1
+# ══════════════════════════════════════════════════════════════
+wan:
+  description: "Alibaba Wan2.1, text-to-video and image-to-video / 阿里Wan2.1文生视频/图生视频"
+  source: "https://huggingface.co/Wan-AI/Wan2.1-T2V-14B"
+  custom_node: "ComfyUI-WanVideoWrapper"
+  custom_node_url: "https://github.com/kijai/ComfyUI-WanVideoWrapper"
+
+  variants:
+    t2v_1_3b: "Text-to-video, 1.3B params, lower VRAM"
+    t2v_14b:  "Text-to-video, 14B params, high quality"
+    i2v_14b:  "Image-to-video, 14B params"
+
+  defaults:
+    steps: 30
+    cfg: 5.0
+    frames: 81
+    width: 832
+    height: 480   # or 480x832, 720x1280
+
+  vram_requirements:
+    t2v_1_3b: "8GB VRAM"
+    t2v_14b:  "24GB+ VRAM (or CPU offload)"
+
+# ══════════════════════════════════════════════════════════════
+# HUNYUAN VIDEO / 混元视频
+# ══════════════════════════════════════════════════════════════
+hunyuan_video:
+  description: "Tencent HunyuanVideo, high quality open-source video / 腾讯混元视频"
+  source: "https://huggingface.co/tencent/HunyuanVideo"
+  custom_node: "ComfyUI-HunyuanVideoWrapper"
+
+  defaults:
+    steps: 50
+    cfg: 6.0
+    frames: 85
+    width: 848
+    height: 480
+  vram: "24GB+ recommended"
+
+# ══════════════════════════════════════════════════════════════
+# COGVIDEOX / CogVideoX
+# ══════════════════════════════════════════════════════════════
+cogvideox:
+  description: "Zhipu CogVideoX, text-to-video / 智谱CogVideoX文生视频"
+  source: "https://huggingface.co/THUDM/CogVideoX-5b"
+  custom_node: "ComfyUI-CogVideoXWrapper"
+
+  variants:
+    cogvideox_2b: "2B params, faster / 2B参数，速度快"
+    cogvideox_5b: "5B params, better quality / 5B参数，质量更好"
+
+  defaults:
+    steps: 50
+    cfg: 6.0
+    frames: 49
+    width: 720
+    height: 480
+
+# ══════════════════════════════════════════════════════════════
+# GENERAL VIDEO OUTPUT NOTES / 通用视频输出说明
+# ══════════════════════════════════════════════════════════════
+output_notes:
+  comfyui_terminal_nodes:
+    - "VHS_VideoCombine (VideoHelperSuite) — outputs mp4/gif/webp"
+    - "SaveAnimatedWEBP — built-in, webp animation only"
+    - "SaveAnimatedPNG — built-in, APNG format"
+
+  vhs_combine_defaults:
+    frame_rate: 8
+    loop_count: 0   # 0 = infinite loop
+    format: "video/h264-mp4"
+    save_output: true
+
+  post_processing:
+    upscale_video: "Process each frame through upscale model, then recombine"
+    interpolate: "FILM or RIFE interpolation (requires separate node)"

@@ -1,0 +1,242 @@
+# SDXL Model Rules / SDXL 模型规则
+# Covers: SDXL 1.0, SDXL Turbo, SDXL Lightning, Pony, Illustrious, NoobAI-XL
+# 涵盖: SDXL 1.0及全系列微调、蒸馏变体
+
+model_family: sdxl
+
+# ── ARCHITECTURE / 架构 ──────────────────────────────────────────
+architecture:
+  base_resolution: 1024
+  latent_channels: 4
+  vae_scale_factor: 8
+  clip:
+    - ViT-bigG/14     # clip_g  (output penultimate layer)
+    - ViT-L/14        # clip_l  (output penultimate layer)
+  dual_clip: true
+  has_refiner: true   # optional second-stage model
+  prediction_type: epsilon
+
+# ── VARIANTS / 变体说明 ──────────────────────────────────────────
+variants:
+  sdxl_base:
+    steps: 25
+    cfg: 7.0
+    sampler: dpmpp_2m
+    scheduler: karras
+    size: 1024x1024
+
+  sdxl_turbo:
+    steps: 1-4
+    cfg: 1.0
+    sampler: euler_ancestral
+    scheduler: sgm_uniform
+    denoise: 1.0
+    note: "No negative prompt needed / 无需负向提示词"
+
+  sdxl_lightning:
+    steps: 4-8        # depends on LoRA (2/4/8 step versions)
+    cfg: 1.0-2.0
+    sampler: euler
+    scheduler: sgm_uniform
+
+  pony_diffusion:
+    note: "Uses SDXL architecture + score-based tags / 使用SDXL架构+score标签"
+    prompt_prefix: "score_9, score_8_up, score_7_up"
+    neg_prefix: "score_1, score_2, score_3, score_4, worst quality"
+    clip_skip: 2
+
+  illustrious / noob_xl:
+    note: "Similar to Pony but image-focused / 类Pony但偏图像"
+    clip_skip: 2
+
+# ── POPULAR CHECKPOINTS / 常用模型 ──────────────────────────────
+popular_checkpoints:
+  base:
+    - name: "sd_xl_base_1.0.safetensors"
+      source: "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0"
+    - name: "juggernautXL_v9Rdphoto2Lightning.safetensors"
+      source: "https://civitai.com/models/133005"
+      notes: "Best all-around SDXL / 综合表现最佳"
+  anime:
+    - name: "illustriousXL_v01.safetensors"
+      source: "https://civitai.com/models/795765"
+    - name: "noobaiXLNAIXL_epsilonPred10Version.safetensors"
+      source: "https://civitai.com/models/833294"
+
+# ── VAE / VAE模型 ────────────────────────────────────────────────
+vae:
+  recommended: "sdxl_vae.safetensors"
+  source: "https://huggingface.co/stabilityai/sdxl-vae"
+  notes: >
+    Many SDXL fine-tunes bake in a fixed VAE. If you see NaN or artifacts,
+    load sdxl_vae.safetensors explicitly.
+    如出现NaN或色块异常，需外部加载sdxl_vae.safetensors。
+  fp16_fix: "sdxl_vae_fp16_fix.safetensors"  # prevents NaN on fp16
+  fp16_fix_source: "https://huggingface.co/madebyollin/sdxl-vae-fp16-fix"
+
+# ── COMFYUI NODE GRAPH / ComfyUI节点图 ──────────────────────────
+comfyui_nodes:
+
+  txt2img_base_only:
+    description: "SDXL base model single-pass / SDXL基础模型单次推理"
+    nodes:
+      1:
+        class_type: CheckpointLoaderSimple
+        title: "Load SDXL Checkpoint"
+        inputs:
+          ckpt_name: "sd_xl_base_1.0.safetensors"
+        outputs: [MODEL, CLIP, VAE]
+
+      2:
+        class_type: CLIPTextEncodeSDXL
+        title: "Positive SDXL Encode"
+        inputs:
+          clip: [1, 1]
+          text_g: "{positive_prompt}"
+          text_l: "{positive_prompt}"
+          width: "{width}"
+          height: "{height}"
+          target_width: "{width}"
+          target_height: "{height}"
+          crop_w: 0
+          crop_h: 0
+        outputs: [CONDITIONING]
+
+      3:
+        class_type: CLIPTextEncodeSDXL
+        title: "Negative SDXL Encode"
+        inputs:
+          clip: [1, 1]
+          text_g: "{negative_prompt}"
+          text_l: "{negative_prompt}"
+          width: "{width}"
+          height: "{height}"
+          target_width: "{width}"
+          target_height: "{height}"
+          crop_w: 0
+          crop_h: 0
+        outputs: [CONDITIONING]
+
+      4:
+        class_type: EmptyLatentImage
+        inputs:
+          width: "{width}"
+          height: "{height}"
+          batch_size: "{batch_size}"
+        outputs: [LATENT]
+
+      5:
+        class_type: KSampler
+        inputs:
+          model: [1, 0]
+          positive: [2, 0]
+          negative: [3, 0]
+          latent_image: [4, 0]
+          seed: "{seed}"
+          steps: "{steps}"
+          cfg: "{cfg}"
+          sampler_name: "{sampler}"
+          scheduler: "{scheduler}"
+          denoise: 1.0
+        outputs: [LATENT]
+
+      6:
+        class_type: VAEDecode
+        inputs:
+          samples: [5, 0]
+          vae: [1, 2]
+        outputs: [IMAGE]
+
+      7:
+        class_type: SaveImage
+        inputs:
+          images: [6, 0]
+          filename_prefix: "SDXL"
+        outputs: []
+
+  refiner_addition:
+    description: >
+      Append after node 5 (base KSampler). Add refiner checkpoint + second KSampler.
+      在node 5之后追加，加载refiner模型+第二个KSampler。
+    add_nodes:
+      8:
+        class_type: CheckpointLoaderSimple
+        title: "Load SDXL Refiner"
+        inputs:
+          ckpt_name: "sd_xl_refiner_1.0.safetensors"
+        outputs: [MODEL, CLIP, VAE]
+
+      9:
+        class_type: CLIPTextEncodeSDXL
+        title: "Refiner Positive"
+        inputs:
+          clip: [8, 1]
+          text_g: "{positive_prompt}"
+          text_l: ""
+          width: "{width}"
+          height: "{height}"
+          target_width: "{width}"
+          target_height: "{height}"
+          crop_w: 0
+          crop_h: 0
+          ascore: 6.0   # aesthetic score / 美学分数
+        outputs: [CONDITIONING]
+
+      10:
+        class_type: CLIPTextEncodeSDXL
+        title: "Refiner Negative"
+        inputs:
+          clip: [8, 1]
+          text_g: "{negative_prompt}"
+          text_l: ""
+          ascore: 2.5
+          width: "{width}"
+          height: "{height}"
+          target_width: "{width}"
+          target_height: "{height}"
+          crop_w: 0
+          crop_h: 0
+        outputs: [CONDITIONING]
+
+      11:
+        class_type: KSamplerAdvanced
+        title: "Refiner KSampler"
+        inputs:
+          model: [8, 0]
+          positive: [9, 0]
+          negative: [10, 0]
+          latent_image: [5, 0]   # from base KSampler output
+          noise_seed: "{seed}"
+          steps: 10
+          cfg: "{cfg}"
+          sampler_name: "euler"
+          scheduler: "normal"
+          start_at_step: 20      # hand-off point (base steps)
+          end_at_step: 30
+          return_with_leftover_noise: false
+          add_noise: false
+        outputs: [LATENT]
+    update_node_6_input:
+      samples: [11, 0]   # redirect VAEDecode to refiner output
+
+# ── A1111 PARAMS / A1111参数 ─────────────────────────────────────
+a1111_params:
+  sampler_name: "DPM++ 2M Karras"
+  steps: 25
+  cfg_scale: 7
+  width: 1024
+  height: 1024
+  refiner_checkpoint: "sd_xl_refiner_1.0.safetensors"  # optional
+  refiner_switch_at: 0.8
+  clip_skip: 1
+
+# ── COMMON ISSUES / 常见问题 ─────────────────────────────────────
+common_issues:
+  - symptom: "NaN / black image / 黑图"
+    fix: "Use sdxl_vae_fp16_fix.safetensors / 使用fp16修复版VAE"
+  - symptom: "Oversaturated colors / 颜色过饱和"
+    fix: "Load explicit VAE or reduce cfg / 外部加载VAE或降低cfg"
+  - symptom: "Text in image looks wrong / 图中文字异常"
+    fix: "SDXL is not optimized for text rendering; use Flux instead / SDXL不适合文字生成"
+  - symptom: "Composition broken at non-square sizes / 非正方形构图异常"
+    fix: "Set crop_w=0, crop_h=0 in CLIPTextEncodeSDXL / 确保crop参数为0"

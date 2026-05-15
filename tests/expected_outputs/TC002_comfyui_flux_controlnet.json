@@ -1,0 +1,37 @@
+{
+  "meta": {
+    "test_id": "TC002",
+    "description": "Flux.1-dev + ControlNet depth → ComfyUI expected output sample",
+    "format": "workflow.json"
+  },
+  "expected_workflow_summary": {
+    "total_nodes": 10,
+    "node_classes": [
+      "DualCLIPLoader",
+      "UNETLoader",
+      "VAELoader",
+      "CLIPTextEncodeFlux",
+      "FluxGuidance",
+      "LoadImage",
+      "ControlNetLoader",
+      "ControlNetApplyAdvanced",
+      "EmptySD3LatentImage",
+      "KSampler",
+      "VAEDecode",
+      "SaveImage"
+    ],
+    "critical_enforcements": [
+      "KSampler.cfg = 1.0",
+      "No negative prompt node",
+      "FluxGuidance.guidance = 3.5",
+      "EmptySD3LatentImage for 16-channel latent"
+    ]
+  },
+  "expected_dependencies": {
+    "checkpoints": ["flux1-dev.safetensors or flux1-dev-fp8.safetensors"],
+    "clip": ["clip_l.safetensors", "t5xxl_fp16.safetensors or t5xxl_fp8_e4m3fn.safetensors"],
+    "vae": ["ae.safetensors"],
+    "controlnet": ["flux.1-canny-controlnet.safetensors"],
+    "custom_nodes": []
+  }
+}

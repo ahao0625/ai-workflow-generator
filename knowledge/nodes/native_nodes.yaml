@@ -1,0 +1,438 @@
+# ComfyUI Native Nodes / ComfyUI原生节点库
+# All built-in nodes, no custom install required / 所有内置节点，无需安装
+
+# ── LOADERS / 加载器 ─────────────────────────────────────────────
+
+CheckpointLoaderSimple:
+  desc: "Load checkpoint (MODEL+CLIP+VAE) / 加载模型（一体式）"
+  inputs:
+    ckpt_name: STRING
+  outputs: [MODEL, CLIP, VAE]
+
+CheckpointLoader:
+  desc: "Load checkpoint with config / 加载模型（带配置）"
+  inputs:
+    config_name: STRING
+    ckpt_name: STRING
+  outputs: [MODEL, CLIP, VAE]
+
+UNETLoader:
+  desc: "Load UNET only (for Flux/SD3 split loading) / 仅加载UNET（Flux/SD3分离加载）"
+  inputs:
+    unet_name: STRING
+    weight_dtype: ENUM [default, fp8_e4m3fn, fp8_e5m2]
+  outputs: [MODEL]
+
+VAELoader:
+  desc: "Load external VAE / 加载外部VAE"
+  inputs:
+    vae_name: STRING
+  outputs: [VAE]
+
+CLIPLoader:
+  desc: "Load single CLIP model / 加载单个CLIP模型"
+  inputs:
+    clip_name: STRING
+    type: ENUM [stable_diffusion, stable_cascade, sd3, stable_audio, mochi]
+  outputs: [CLIP]
+
+DualCLIPLoader:
+  desc: "Load two CLIP models for Flux/SD3 / 为Flux/SD3加载双CLIP"
+  inputs:
+    clip_name1: STRING
+    clip_name2: STRING
+    type: ENUM [sdxl, sd3, flux, hunyuan_video]
+  outputs: [CLIP]
+
+LoraLoader:
+  desc: "Apply LoRA to model and CLIP / 将LoRA应用于模型和CLIP"
+  inputs:
+    model: MODEL
+    clip: CLIP
+    lora_name: STRING
+    strength_model: FLOAT [0.0..2.0]
+    strength_clip: FLOAT [0.0..2.0]
+  outputs: [MODEL, CLIP]
+  critical: "Must thread BOTH model and clip / 必须同时串联model和clip"
+
+LoraLoaderModelOnly:
+  desc: "Apply LoRA to model only / 仅将LoRA应用于模型"
+  inputs:
+    model: MODEL
+    lora_name: STRING
+    strength_model: FLOAT
+  outputs: [MODEL]
+
+ControlNetLoader:
+  desc: "Load ControlNet model / 加载ControlNet模型"
+  inputs:
+    control_net_name: STRING
+  outputs: [CONTROL_NET]
+
+DiffControlNetLoader:
+  desc: "Load T2I-Adapter style ControlNet / 加载T2I-Adapter风格ControlNet"
+  inputs:
+    model: MODEL
+    control_net_name: STRING
+  outputs: [CONTROL_NET]
+
+UpscaleModelLoader:
+  desc: "Load pixel upscale model / 加载像素超分模型"
+  inputs:
+    model_name: STRING
+  outputs: [UPSCALE_MODEL]
+
+LoadImage:
+  desc: "Load image from ComfyUI input folder / 从输入目录加载图像"
+  inputs:
+    image: STRING (filename)
+    upload: BOOLEAN
+  outputs: [IMAGE, MASK]
+
+LoadImageMask:
+  desc: "Load image as mask / 加载图像为蒙版"
+  inputs:
+    image: STRING
+    channel: ENUM [red, green, blue, alpha]
+  outputs: [MASK]
+
+# ── TEXT ENCODERS / 文本编码器 ────────────────────────────────────
+
+CLIPTextEncode:
+  desc: "Encode prompt text / 编码提示词文本"
+  inputs:
+    clip: CLIP
+    text: STRING
+  outputs: [CONDITIONING]
+  use_for: [sd15, sd2, flux]
+
+CLIPTextEncodeSDXL:
+  desc: "SDXL dual-CLIP encode with size conditioning / SDXL双CLIP编码（含尺寸条件）"
+  inputs:
+    clip: CLIP
+    text_g: STRING   # ViT-bigG prompt
+    text_l: STRING   # ViT-L prompt (usually same as text_g)
+    width: INT
+    height: INT
+    crop_w: INT [default 0]
+    crop_h: INT [default 0]
+    target_width: INT
+    target_height: INT
+    ascore: FLOAT [default 6.0, for refiner only]
+  outputs: [CONDITIONING]
+  use_for: [sdxl]
+
+CLIPTextEncodeSD3:
+  desc: "SD3 triple-encoder text encode / SD3三路编码器文本编码"
+  inputs:
+    clip: CLIP
+    text_g: STRING
+    text_l: STRING
+    t5xxl: STRING
+    empty_padding: ENUM [none, empty_prompt]
+  outputs: [CONDITIONING]
+  use_for: [sd3]
+
+CLIPTextEncodeFlux:
+  desc: "Flux unified prompt encode / Flux统一提示词编码"
+  inputs:
+    clip: CLIP
+    clip_l: STRING
+    t5xxl: STRING
+    guidance: FLOAT [default 3.5]
+  outputs: [CONDITIONING]
+  note: "Alternative to CLIPTextEncode + FluxGuidance / CLIPTextEncode+FluxGuidance的替代方案"
+
+CLIPSetLastLayer:
+  desc: "Set CLIP skip / 设置CLIP跳层（clip_skip）"
+  inputs:
+    clip: CLIP
+    stop_at_clip_layer: INT [-1..-24, default -1]
+  outputs: [CLIP]
+  note: "Use -2 for anime models / 动漫模型用-2"
+
+# ── CONDITIONING / 条件控制 ───────────────────────────────────────
+
+ConditioningCombine:
+  inputs: [conditioning_1: CONDITIONING, conditioning_2: CONDITIONING]
+  outputs: [CONDITIONING]
+  desc: "Merge two conditionings / 合并两个条件"
+
+ConditioningConcat:
+  inputs: [conditioning_to: CONDITIONING, conditioning_from: CONDITIONING]
+  outputs: [CONDITIONING]
+
+ConditioningSetArea:
+  desc: "Regional prompt with bounding box / 区域提示词（矩形区域）"
+  inputs: [conditioning: CONDITIONING, width: INT, height: INT, x: INT, y: INT, strength: FLOAT]
+  outputs: [CONDITIONING]
+
+ConditioningSetMask:
+  desc: "Apply conditioning to mask region / 将条件应用于蒙版区域"
+  inputs: [conditioning: CONDITIONING, mask: MASK, strength: FLOAT, set_cond_area: ENUM]
+  outputs: [CONDITIONING]
+
+ConditioningZeroOut:
+  inputs: [conditioning: CONDITIONING]
+  outputs: [CONDITIONING]
+  desc: "Create empty/null conditioning / 创建空条件（用于无分类器引导）"
+
+ConditioningSetTimestepRange:
+  desc: "Restrict conditioning to timestep range / 限制条件在时间步范围内（用于Refiner）"
+  inputs: [conditioning: CONDITIONING, start: FLOAT, end: FLOAT]
+  outputs: [CONDITIONING]
+
+ControlNetApply:
+  desc: "Basic ControlNet application / 基础ControlNet应用"
+  inputs:
+    conditioning: CONDITIONING
+    control_net: CONTROL_NET
+    image: IMAGE
+    strength: FLOAT [0.0..2.0]
+  outputs: [CONDITIONING]
+
+ControlNetApplyAdvanced:
+  desc: "ControlNet with start/end timestep control / 带时间步控制的ControlNet（推荐）"
+  inputs:
+    positive: CONDITIONING
+    negative: CONDITIONING
+    control_net: CONTROL_NET
+    image: IMAGE
+    strength: FLOAT [0.0..2.0]
+    start_percent: FLOAT [0.0..1.0, default 0.0]
+    end_percent: FLOAT [0.0..1.0, default 1.0]
+  outputs: [positive: CONDITIONING, negative: CONDITIONING]
+  preferred: true
+
+InpaintConditioning:
+  desc: "Conditioning for inpaint models / 内绘模型专用条件"
+  inputs: [positive: CONDITIONING, negative: CONDITIONING, vae: VAE, pixels: IMAGE, mask: MASK]
+  outputs: [positive: CONDITIONING, negative: CONDITIONING, latent: LATENT]
+
+FluxGuidance:
+  desc: "Flux-specific guidance strength / Flux专属引导强度节点"
+  inputs: [conditioning: CONDITIONING, guidance: FLOAT]
+  outputs: [CONDITIONING]
+  use_for: [flux]
+  note: "replaces cfg in KSampler for Flux / 在Flux中替代KSampler的cfg参数"
+
+# ── LATENT / 潜空间 ───────────────────────────────────────────────
+
+EmptyLatentImage:
+  desc: "Create blank latent (SD1.5/SDXL 4ch) / 创建空潜空间（4通道，用于SD1.5/SDXL）"
+  inputs: [width: INT, height: INT, batch_size: INT]
+  outputs: [LATENT]
+
+EmptySD3LatentImage:
+  desc: "Create blank latent for SD3/Flux (16ch) / 创建空潜空间（16通道，用于SD3/Flux）"
+  inputs: [width: INT, height: INT, batch_size: INT]
+  outputs: [LATENT]
+
+LatentUpscale:
+  desc: "Upscale latent space / 潜空间放大"
+  inputs: [samples: LATENT, upscale_method: ENUM, width: INT, height: INT, crop: ENUM]
+  outputs: [LATENT]
+
+LatentUpscaleBy:
+  desc: "Upscale latent by factor / 按倍数放大潜空间"
+  inputs: [samples: LATENT, upscale_method: ENUM, scale_by: FLOAT]
+  outputs: [LATENT]
+
+LatentComposite:
+  desc: "Composite two latents / 合并两个潜空间（用于局部重绘）"
+  inputs: [samples_to: LATENT, samples_from: LATENT, x: INT, y: INT, feather: INT]
+  outputs: [LATENT]
+
+LatentCrop:
+  inputs: [samples: LATENT, width: INT, height: INT, x: INT, y: INT]
+  outputs: [LATENT]
+
+LatentFlip:
+  inputs: [samples: LATENT, flip_method: ENUM [x-axis, y-axis]]
+  outputs: [LATENT]
+
+# ── VAE ENCODE/DECODE / VAE编解码 ────────────────────────────────
+
+VAEEncode:
+  desc: "Encode image to latent / 图像编码为潜空间"
+  inputs: [pixels: IMAGE, vae: VAE]
+  outputs: [LATENT]
+
+VAEEncodeForInpaint:
+  desc: "Encode image+mask for inpainting / 为内绘编码图像+蒙版"
+  inputs: [pixels: IMAGE, vae: VAE, mask: MASK, grow_mask_by: INT [default 6]]
+  outputs: [LATENT]
+  critical: "MUST use this (not VAEEncode) for inpainting / 内绘必须使用此节点"
+
+VAEDecode:
+  desc: "Decode latent to image / 潜空间解码为图像"
+  inputs: [samples: LATENT, vae: VAE]
+  outputs: [IMAGE]
+
+VAEDecodeTiled:
+  desc: "Tiled decode for large images (saves VRAM) / 分块解码（大图省显存）"
+  inputs: [samples: LATENT, vae: VAE, tile_size: INT [default 512]]
+  outputs: [IMAGE]
+
+# ── SAMPLERS / 采样器 ─────────────────────────────────────────────
+
+KSampler:
+  desc: "Standard sampler / 标准采样器"
+  inputs:
+    model: MODEL
+    positive: CONDITIONING
+    negative: CONDITIONING
+    latent_image: LATENT
+    seed: INT
+    steps: INT
+    cfg: FLOAT
+    sampler_name: ENUM [euler, euler_ancestral, heun, dpm_2, dpm_2_ancestral,
+                        lms, dpm_fast, dpm_adaptive, dpmpp_2s_ancestral, dpmpp_sde,
+                        dpmpp_sde_gpu, dpmpp_2m, dpmpp_2m_sde, dpmpp_2m_sde_gpu,
+                        dpmpp_3m_sde, dpmpp_3m_sde_gpu, ddpm, lcm, uni_pc, uni_pc_bh2]
+    scheduler: ENUM [normal, karras, exponential, sgm_uniform, simple, ddim_uniform, beta]
+    denoise: FLOAT [0.0..1.0]
+  outputs: [LATENT]
+
+KSamplerAdvanced:
+  desc: "Advanced sampler with step range control / 带步骤范围控制的高级采样器"
+  inputs:
+    model: MODEL
+    add_noise: ENUM [enable, disable]
+    noise_seed: INT
+    steps: INT
+    cfg: FLOAT
+    sampler_name: ENUM
+    scheduler: ENUM
+    positive: CONDITIONING
+    negative: CONDITIONING
+    latent_image: LATENT
+    start_at_step: INT
+    end_at_step: INT
+    return_with_leftover_noise: ENUM
+  outputs: [LATENT]
+  use_for: "SDXL refiner, multi-pass sampling / SDXL refiner和多阶段采样"
+
+# ── IMAGE PROCESSING / 图像处理 ──────────────────────────────────
+
+ImageScale:
+  inputs: [image: IMAGE, upscale_method: ENUM, width: INT, height: INT, crop: ENUM]
+  outputs: [IMAGE]
+
+ImageScaleBy:
+  inputs: [image: IMAGE, upscale_method: ENUM, scale_by: FLOAT]
+  outputs: [IMAGE]
+
+ImageUpscaleWithModel:
+  desc: "Pixel upscale with AI model / 使用AI模型超分"
+  inputs: [upscale_model: UPSCALE_MODEL, image: IMAGE]
+  outputs: [IMAGE]
+
+ImageCrop:
+  inputs: [image: IMAGE, width: INT, height: INT, x: INT, y: INT]
+  outputs: [IMAGE]
+
+ImagePadForOutpaint:
+  desc: "Pad image for outpainting / 为外扩绘图填充图像"
+  inputs: [image: IMAGE, left: INT, top: INT, right: INT, bottom: INT, feathering: INT]
+  outputs: [IMAGE, MASK]
+
+ImageBatch:
+  inputs: [image1: IMAGE, image2: IMAGE]
+  outputs: [IMAGE]
+
+ImageComposite:
+  inputs: [destination: IMAGE, source: IMAGE, x: INT, y: INT, mask: MASK (opt)]
+  outputs: [IMAGE]
+
+ImageColorMatch: {}
+ImageBlend:
+  inputs: [image1: IMAGE, image2: IMAGE, blend_factor: FLOAT, blend_mode: ENUM]
+  outputs: [IMAGE]
+
+# ── MASK OPERATIONS / 蒙版操作 ────────────────────────────────────
+
+MaskToImage:
+  inputs: [mask: MASK]
+  outputs: [IMAGE]
+
+ImageToMask:
+  inputs: [image: IMAGE, channel: ENUM [red, green, blue, alpha]]
+  outputs: [MASK]
+
+MaskComposite:
+  inputs: [destination: MASK, source: MASK, x: INT, y: INT, operation: ENUM]
+  outputs: [MASK]
+
+GrowMask:
+  inputs: [mask: MASK, expand: INT, tapered_corners: BOOLEAN]
+  outputs: [MASK]
+
+FeatherMask:
+  inputs: [mask: MASK, left: INT, top: INT, right: INT, bottom: INT]
+  outputs: [MASK]
+
+SolidMask:
+  inputs: [value: FLOAT, width: INT, height: INT]
+  outputs: [MASK]
+
+InvertMask:
+  inputs: [mask: MASK]
+  outputs: [MASK]
+
+# ── OUTPUT / 输出 ─────────────────────────────────────────────────
+
+SaveImage:
+  desc: "Save image to output folder / 保存图像到输出目录"
+  inputs:
+    images: IMAGE
+    filename_prefix: STRING [default "ComfyUI"]
+  outputs: []
+  terminal_node: true
+
+PreviewImage:
+  desc: "Preview only, no disk save / 仅预览，不保存到磁盘"
+  inputs: [images: IMAGE]
+  outputs: []
+  terminal_node: true
+
+SaveAnimatedWEBP:
+  desc: "Save animated WEBP / 保存动态WEBP"
+  inputs: [images: IMAGE, filename_prefix: STRING, fps: FLOAT, lossless: BOOLEAN, quality: INT]
+  outputs: []
+
+# ── UTILITY / 实用工具 ────────────────────────────────────────────
+
+PrimitiveNode:
+  desc: "Constant value input / 常量值输入（可连接到任何参数）"
+  outputs: [any type]
+
+Note:
+  desc: "Text comment / 文字注释（不影响执行）"
+
+CLIPMergeSimple:
+  inputs: [clip1: CLIP, clip2: CLIP, ratio: FLOAT]
+  outputs: [CLIP]
+
+ModelMergeSimple:
+  inputs: [model1: MODEL, model2: MODEL, ratio: FLOAT]
+  outputs: [MODEL]
+
+VAEDecodeTiled: {}  # see above
+
+VideoLinearCFGGuidance:
+  desc: "Linear CFG for video models / 视频模型线性CFG（SVD用）"
+  inputs: [model: MODEL, min_cfg: FLOAT]
+  outputs: [MODEL]
+
+SVD_img2vid_Conditioning:
+  desc: "SVD-specific conditioning / SVD专用条件节点"
+  inputs: [clip_vision: CLIP_VISION, init_image: IMAGE, vae: VAE,
+           width: INT, height: INT, video_frames: INT, motion_bucket_id: INT,
+           fps: INT, augmentation_level: FLOAT]
+  outputs: [positive: CONDITIONING, negative: CONDITIONING, latent: LATENT]
+
+ImageOnlyCheckpointLoader:
+  desc: "Load image-only checkpoint (SVD/video) / 加载图像专用模型（SVD/视频）"
+  inputs: [ckpt_name: STRING]
+  outputs: [MODEL, CLIP_VISION, VAE]

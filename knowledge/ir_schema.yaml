@@ -1,0 +1,313 @@
+# IR Schema — Internal Representation / 中间表示规范
+# All workflow generation passes through this schema before platform rendering.
+# 所有工作流生成在平台渲染前都通过此规范转换。
+
+ir_version: "1.0"
+
+# ============================================================
+# CORE FIELDS / 核心字段
+# ============================================================
+
+model_family:
+  type: enum
+  required: true
+  # 模型族 / Model family
+  values:
+    sd15:     "Stable Diffusion 1.x (512px base)"
+    sd2:      "Stable Diffusion 2.x (768px, v-prediction)"
+    sdxl:     "Stable Diffusion XL (1024px, dual CLIP)"
+    sdxl_turbo: "SDXL Turbo/Lightning (≤4 steps, cfg≈1)"
+    flux:     "Flux.1 dev/schnell/Fill/Canny/Depth"
+    sd3:      "Stable Diffusion 3 / 3.5 (triple text encoder)"
+    cascade:  "Stable Cascade (two-stage latent)"
+    video:    "Video generation models (AnimateDiff/SVD/Wan/etc)"
+
+model_name:
+  type: string
+  required: false
+  # Specific checkpoint filename / 具体checkpoint文件名
+  default: "(model_family_default)"
+  examples:
+    sd15:   "dreamshaper_8.safetensors"
+    sdxl:   "juggernautXL_v9.safetensors"
+    flux:   "flux1-dev-fp8.safetensors"
+    sd3:    "sd3.5_large.safetensors"
+
+pipeline_type:
+  type: enum
+  required: true
+  default: "txt2img"
+  # 管线类型 / Pipeline type
+  values:
+    txt2img:   "Text to image / 文生图"
+    img2img:   "Image to image / 图生图"
+    inpaint:   "Inpainting / 局部重绘"
+    outpaint:  "Outpainting / 外扩绘图"
+    img2vid:   "Image to video / 图生视频"
+    txt2vid:   "Text to video / 文生视频"
+    upscale:   "Upscale only / 仅超分"
+    facefix:   "Face restoration only / 仅人脸修复"
+
+# ============================================================
+# INPUT / 输入
+# ============================================================
+
+prompt:
+  type: string
+  required: true
+  # Positive prompt / 正向提示词
+  note_flux: "Flux uses single unified prompt, no negative"
+  note_sd3:  "SD3 supports negative but it's less effective"
+
+negative_prompt:
+  type: string
+  required: false
+  # Negative prompt / 负向提示词
+  not_applicable: [flux, sdxl_turbo]
+  default: "worst quality, low quality, blurry"
+
+input_image:
+  type: string  # file path or base64
+  required_when: [img2img, inpaint, outpaint, img2vid]
+
+input_mask:
+  type: string  # file path or base64, white=inpaint area
+  required_when: [inpaint, outpaint]
+
+# ============================================================
+# SAMPLING PARAMETERS / 采样参数
+# ============================================================
+
+width:
+  type: int
+  default_by_family:
+    sd15: 512
+    sd2: 768
+    sdxl: 1024
+    sdxl_turbo: 1024
+    flux: 1024
+    sd3: 1024
+    cascade: 1024
+
+height:
+  type: int
+  # Same defaults as width / 默认值同width
+
+steps:
+  type: int
+  default_by_family:
+    sd15: 20
+    sd2: 20
+    sdxl: 25
+    sdxl_turbo: 4
+    flux_dev: 20
+    flux_schnell: 4
+    sd3: 28
+    cascade: 20
+
+cfg:
+  type: float
+  # Classifier-free guidance scale / 无分类器引导比例
+  default_by_family:
+    sd15: 7.0
+    sd2: 7.0
+    sdxl: 7.0
+    sdxl_turbo: 1.0
+    flux_dev: 3.5   # guidance node value, not cfg
+    flux_schnell: 1.0
+    sd3: 4.5
+    cascade: 4.0
+  note_flux: "Flux uses FluxGuidance node instead of cfg; set cfg=1 in KSampler"
+
+sampler_name:
+  type: enum
+  default: "euler"
+  values: [euler, euler_ancestral, dpmpp_2m, dpmpp_2m_sde, dpmpp_3m_sde,
+           dpmpp_2s_ancestral, ddim, uni_pc, lcm, heun]
+  recommended_by_family:
+    sd15: dpmpp_2m
+    sdxl: dpmpp_2m
+    flux: euler
+    sd3: dpmpp_2m
+
+scheduler:
+  type: enum
+  default: "karras"
+  values: [normal, karras, exponential, sgm_uniform, simple, ddim_uniform, beta]
+  recommended_by_family:
+    sd15: karras
+    sdxl: karras
+    flux: simple
+    sd3: sgm_uniform
+    sdxl_turbo: sgm_uniform
+
+seed:
+  type: int
+  default: -1   # -1 = random / -1表示随机
+
+denoise:
+  type: float
+  range: [0.0, 1.0]
+  default: 1.0
+  relevant_when: [img2img, inpaint, hires_fix.second_pass]
+  typical_img2img: 0.75
+  typical_hires: 0.45
+
+batch_size:
+  type: int
+  default: 1
+
+# ============================================================
+# OPTIONAL MODULES / 可选功能模块
+# ============================================================
+
+loras:
+  type: array
+  items:
+    name:
+      type: string   # filename without extension
+    weight_model:
+      type: float
+      default: 0.8
+      range: [0.0, 2.0]
+    weight_clip:
+      type: float
+      default: 0.8
+  note: "Each LoRA adds one LoraLoader node threading MODEL+CLIP"
+  # 每个LoRA增加一个LoraLoader节点，串联MODEL和CLIP
+
+controlnets:
+  type: array
+  items:
+    model:
+      type: string   # controlnet model filename
+    preprocessor:
+      type: enum
+      values: [none, openpose, dwpose, canny, hed, lineart, anime_lineart,
+               depth_midas, depth_zoe, depth_anything, normal_map,
+               tile, scribble, softedge, shuffle, inpaint, seg]
+    strength:
+      type: float
+      default: 1.0
+      range: [0.0, 2.0]
+    start_percent:
+      type: float
+      default: 0.0
+    end_percent:
+      type: float
+      default: 1.0
+    input_image:
+      type: string
+  note: "Multiple CNs chain via ControlNetApplyAdvanced with start/end percent"
+
+ipadapter:
+  type: object
+  fields:
+    model:
+      type: string   # ipadapter model filename
+    clip_vision:
+      type: string   # clip vision encoder filename
+    image:
+      type: string
+    weight:
+      type: float
+      default: 1.0
+    weight_type:
+      type: enum
+      values: [linear, ease_in, ease_out, ease_in-out, reverse_in-out, weak_input, strong_input]
+      default: linear
+    combine_embeds:
+      type: enum
+      values: [concat, add, subtract, average, norm_average]
+      default: concat
+
+hires_fix:
+  type: object
+  fields:
+    enabled: bool
+    upscale_by: float (default 2.0)
+    upscale_method:
+      values: [nearest-exact, bilinear, area, bicubic, bislerp]
+      default: bislerp
+    steps: int (default 15)
+    denoise: float (default 0.45)
+    sampler: (inherits main sampler if unset)
+
+upscale_model:
+  type: object
+  fields:
+    model:
+      type: string
+      examples: [4x-UltraSharp.pth, RealESRGAN_x4plus.pth, 4xNomosWebPhoto_RealPLKSR.safetensors]
+    factor: float (default 4.0)
+
+face_restore:
+  type: object
+  fields:
+    method:
+      values: [codeformer, gfpgan, restoreformer]
+      default: codeformer
+    fidelity: float (default 0.7, codeformer only)
+
+animatediff:
+  type: object
+  relevant_when: pipeline_type in [img2vid, txt2vid]
+  fields:
+    motion_model: string
+    context_length: int (default 16)
+    context_stride: int (default 1)
+    context_overlap: int (default 4)
+    fps: int (default 8)
+    total_frames: int (default 16)
+    motion_lora: string (optional)
+    motion_lora_strength: float (default 1.0)
+
+video_output:
+  type: object
+  fields:
+    format:
+      values: [mp4, gif, webp_anim]
+      default: mp4
+    fps: int (default 8)
+    quality: int (default 85)
+
+regional_prompt:
+  type: array
+  items:
+    mask_or_area: string
+    prompt: string
+    strength: float (default 1.0)
+
+# ============================================================
+# OUTPUT / 输出
+# ============================================================
+
+output_format:
+  type: enum
+  default: png
+  values: [png, jpg, webp, mp4, gif]
+
+save_metadata:
+  type: bool
+  default: true
+  # Embed generation params in PNG / 在PNG中嵌入生成参数
+
+# ============================================================
+# PLATFORM TARGET / 目标平台
+# ============================================================
+
+target_platform:
+  type: enum
+  required: true
+  values:
+    comfyui:      "ComfyUI node graph JSON"
+    comfyui_api:  "ComfyUI API format JSON (for programmatic use)"
+    a1111:        "AUTOMATIC1111 / Forge parameters JSON"
+    diffusers:    "HuggingFace Diffusers Python script"
+    replicate:    "Replicate API request JSON"
+    stability:    "Stability AI API request JSON"
+    invokeai:     "InvokeAI node graph JSON"
+    midjourney:   "Midjourney /imagine prompt"
+    dalle:        "DALL·E / GPT-image API request"
+    ideogram:     "Ideogram prompt + params"
+    prompt_only:  "Generic optimized prompt text"

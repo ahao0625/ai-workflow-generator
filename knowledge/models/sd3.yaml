@@ -1,0 +1,77 @@
+# SD3 / SD3.5 Model Rules / SD3模型规则
+
+model_family: sd3
+
+architecture:
+  base_resolution: 1024
+  latent_channels: 16
+  text_encoders:
+    - "CLIP-L (ViT-L/14)"
+    - "CLIP-G (ViT-bigG/14)"
+    - "T5-XXL (optional but recommended)"
+  attention: "MM-DiT (Multi-Modal Diffusion Transformer)"
+  prediction_type: flow_matching
+
+variants:
+  sd3_medium:
+    params: 2B
+    source: "https://huggingface.co/stabilityai/stable-diffusion-3-medium"
+    steps: 28
+    cfg: 4.5
+    sampler: dpmpp_2m
+    scheduler: sgm_uniform
+
+  sd3_large:
+    params: 8B
+    source: "https://huggingface.co/stabilityai/stable-diffusion-3.5-large"
+    steps: 40
+    cfg: 4.5
+
+  sd3_large_turbo:
+    params: 8B
+    steps: 4
+    cfg: 1.0
+    source: "https://huggingface.co/stabilityai/stable-diffusion-3.5-large-turbo"
+
+required_models:
+  clip_l:
+    name: "clip_l.safetensors"
+    path: "models/clip/"
+    source: "https://huggingface.co/stabilityai/stable-diffusion-3-medium"
+  clip_g:
+    name: "clip_g.safetensors"
+    path: "models/clip/"
+  t5xxl:
+    name: "t5xxl_fp16.safetensors"
+    path: "models/clip/"
+    note: "Optional but strongly recommended for prompt adherence / 强烈建议使用T5以提升提示词遵循度"
+
+defaults:
+  steps: 28
+  cfg: 4.5
+  sampler: dpmpp_2m
+  scheduler: sgm_uniform
+  size: 1024x1024
+
+comfyui_nodes:
+  txt2img:
+    key_differences_from_sd15:
+      - "Use CLIPTextEncodeSD3 (not CLIPTextEncode) for triple-encoder support"
+      - "Use EmptySD3LatentImage for 16-channel latent"
+      - "Use CheckpointLoaderSimple OR separate UNETLoader+CLIPLoader+VAELoader"
+      - "Scheduler: sgm_uniform recommended"
+    node_4:
+      class_type: CLIPTextEncodeSD3
+      inputs:
+        clip: [CLIP_source]
+        text_g: "{positive_prompt}"
+        text_l: "{positive_prompt}"
+        t5xxl: "{positive_prompt}"
+        empty_padding: "none"
+      outputs: [CONDITIONING]
+
+common_issues:
+  - symptom: "Prompt ignored / 提示词无效"
+    fix: "T5-XXL missing — load it for better prompt adherence / 加载T5-XXL模型"
+  - symptom: "Saturated/harsh colors / 颜色过度饱和"
+    fix: "Lower cfg to 3.5–5.0 range / 降低cfg至3.5-5.0"

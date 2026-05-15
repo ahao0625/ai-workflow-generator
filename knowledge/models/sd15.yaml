@@ -1,0 +1,168 @@
+# SD 1.5 Model Rules / SD 1.5 模型规则
+# Covers: SD1.x, SD1.5 fine-tunes (DreamShaper, RealisticVision, etc.)
+# 涵盖: SD1.x及其所有微调模型
+
+model_family: sd15
+
+# ── ARCHITECTURE / 架构 ──────────────────────────────────────────
+architecture:
+  base_resolution: 512   # 训练分辨率
+  latent_channels: 4
+  vae_scale_factor: 8
+  clip: ViT-L/14
+  prediction_type: epsilon  # NOT v-prediction (that's SD2)
+
+# ── RECOMMENDED DEFAULTS / 推荐默认值 ───────────────────────────
+defaults:
+  width: 512
+  height: 512
+  steps: 20
+  cfg: 7.0
+  sampler: dpmpp_2m
+  scheduler: karras
+  denoise: 1.0   # txt2img
+
+# ── POPULAR CHECKPOINTS / 常用模型 ──────────────────────────────
+popular_checkpoints:
+  realistic:
+    - name: "realisticVisionV60B1_v60B1VAE.safetensors"
+      source: "https://civitai.com/models/4201"
+      notes: "Best for photorealistic humans / 人像写实首选"
+    - name: "dreamshaper_8.safetensors"
+      source: "https://civitai.com/models/4384"
+      notes: "Versatile, stylized realism / 风格化写实多用途"
+  anime:
+    - name: "counterfeitV30_v30.safetensors"
+      source: "https://civitai.com/models/4468"
+    - name: "anything-v5-PrtRE.safetensors"
+      source: "https://civitai.com/models/9409"
+  painting:
+    - name: "deliberate_v6.safetensors"
+      source: "https://civitai.com/models/4823"
+
+# ── VAE / VAE模型 ────────────────────────────────────────────────
+vae:
+  recommended: "vae-ft-mse-840000-ema-pruned.safetensors"
+  source: "https://huggingface.co/stabilityai/sd-vae-ft-mse-original"
+  notes: >
+    Many SD1.5 checkpoints include a baked-in VAE. If colors look washed out,
+    load external VAE explicitly. / 很多SD1.5模型内置VAE，如颜色发灰则需外部VAE。
+
+# ── COMFYUI NODE GRAPH / ComfyUI节点图 ──────────────────────────
+comfyui_nodes:
+
+  txt2img_minimal:
+    # Minimal viable txt2img / 最小可用文生图
+    nodes:
+      1:
+        class_type: CheckpointLoaderSimple
+        title: "Load Checkpoint / 加载模型"
+        inputs:
+          ckpt_name: "dreamshaper_8.safetensors"
+        outputs: [MODEL, CLIP, VAE]
+
+      2:
+        class_type: CLIPTextEncode
+        title: "Positive Prompt / 正向提示词"
+        inputs:
+          clip: [1, 1]   # node 1, output slot 1 (CLIP)
+          text: "{positive_prompt}"
+        outputs: [CONDITIONING]
+
+      3:
+        class_type: CLIPTextEncode
+        title: "Negative Prompt / 负向提示词"
+        inputs:
+          clip: [1, 1]
+          text: "{negative_prompt}"
+        outputs: [CONDITIONING]
+
+      4:
+        class_type: EmptyLatentImage
+        title: "Empty Latent / 空潜空间"
+        inputs:
+          width: "{width}"
+          height: "{height}"
+          batch_size: "{batch_size}"
+        outputs: [LATENT]
+
+      5:
+        class_type: KSampler
+        title: "KSampler"
+        inputs:
+          model: [1, 0]        # MODEL
+          positive: [2, 0]     # CONDITIONING
+          negative: [3, 0]     # CONDITIONING
+          latent_image: [4, 0] # LATENT
+          seed: "{seed}"
+          steps: "{steps}"
+          cfg: "{cfg}"
+          sampler_name: "{sampler}"
+          scheduler: "{scheduler}"
+          denoise: 1.0
+        outputs: [LATENT]
+
+      6:
+        class_type: VAEDecode
+        title: "VAE Decode"
+        inputs:
+          samples: [5, 0]   # LATENT
+          vae: [1, 2]       # VAE
+        outputs: [IMAGE]
+
+      7:
+        class_type: SaveImage
+        title: "Save Image / 保存图像"
+        inputs:
+          images: [6, 0]    # IMAGE
+          filename_prefix: "ComfyUI"
+        outputs: []
+
+  # LoRA insertion: inject between checkpoint and KSampler
+  # LoRA插入: 在checkpoint和KSampler之间插入
+  lora_insertion_pattern:
+    note: >
+      For each LoRA, insert a LoraLoader node.
+      Chain: CheckpointLoader → LoraLoader_1 → LoraLoader_2 → … → KSampler
+      Both MODEL and CLIP must flow through every LoraLoader.
+      每个LoRA插入一个LoraLoader节点，MODEL和CLIP都必须流经每个LoraLoader。
+    node_template:
+      class_type: LoraLoader
+      inputs:
+        model: [PREVIOUS_NODE, 0]   # MODEL from previous
+        clip: [PREVIOUS_NODE, 1]    # CLIP from previous
+        lora_name: "{lora_name}"
+        strength_model: "{weight_model}"
+        strength_clip: "{weight_clip}"
+      outputs: [MODEL, CLIP]
+
+# ── A1111 PARAMS / A1111参数 ─────────────────────────────────────
+a1111_params:
+  sampler_name: "DPM++ 2M Karras"
+  steps: 20
+  cfg_scale: 7
+  width: 512
+  height: 512
+  restore_faces: false
+  tiling: false
+  clip_skip: 1   # use 2 for anime models / 动漫模型用2
+
+# ── INPAINTING NOTES / 局部重绘说明 ─────────────────────────────
+inpaint_notes: >
+  For inpainting, prefer dedicated inpaint checkpoints:
+  - sd-v1-5-inpainting.ckpt (original)
+  - dreamshaper_8Inpainting.safetensors
+  In ComfyUI: ALWAYS use VAEEncodeForInpaint, not VAEEncode.
+  Set "grow_mask_by" to 6-8 pixels for better blending.
+  局部重绘优先使用专用inpaint模型；ComfyUI中必须使用VAEEncodeForInpaint节点。
+
+# ── COMMON ISSUES / 常见问题 ─────────────────────────────────────
+common_issues:
+  - symptom: "Washed out / gray colors / 颜色发灰"
+    fix: "Load external VAE: vae-ft-mse-840000 / 加载外部VAE"
+  - symptom: "Blurry face / 人脸模糊"
+    fix: "Add face detailer module or use ADetailer extension / 添加人脸细化模块"
+  - symptom: "Two heads / extra limbs / 双头多肢"
+    fix: "Size too large for SD1.5; use hires_fix instead / 尺寸过大，改用hires_fix"
+  - symptom: "Prompt ignored / 提示词无效"
+    fix: "Check clip_skip value; for anime use clip_skip=2 / 检查clip_skip设置"

@@ -1,0 +1,423 @@
+# ComfyUI Workflow Renderer / ComfyUI工作流渲染器
+# Maps IR → ComfyUI node graph JSON (workflow.json + workflow_api.json)
+# 将 IR 映射为 ComfyUI 节点图 JSON
+
+platform: comfyui
+output_formats: [workflow.json, workflow_api.json, dependencies.md]
+
+# ── RENDERING OVERVIEW / 渲染概述 ──────────────────────────────
+overview: >
+  ComfyUI workflows are JSON objects where each key is a stringified node ID,
+  and each value contains: id, type (class_type), pos (x,y coordinates),
+  size (optional), inputs (a list of widget values and connections),
+  outputs (slot names), and properties (node nickname).
+  /
+  ComfyUI工作流是JSON对象，每个键为节点ID字符串，值包含id/type/pos/inputs/outputs/properties。
+
+# ── NODE ID ASSIGNMENT / 节点ID分配 ────────────────────────────
+node_id_assignment:
+  rules:
+    - "Start at 1, increment by 1 / 从1开始，逐1递增"
+    - "Topological order: sources (loaders) first, then encoders, then samplers, then outputs / 拓扑顺序: 加载器最先，编码器其次，采样器居中，输出最后"
+    - "If adding nodes mid-chain (e.g. LoRA), shift all subsequent IDs / 中间插入节点时，后续ID依次后移"
+  node_id_start: 1
+
+# ── LAYOUT COORDINATES / 布局坐标 ──────────────────────────────
+layout:
+  grid:
+    x_step: 300   # horizontal spacing between layers
+    y_step: 120   # vertical spacing within same layer
+  layer_x_positions:
+    layer_loader: 50       # CheckpointLoader, UNETLoader, VAE loader
+    layer_clip: 350         # CLIPTextEncode (positive + negative)
+    layer_conditioning: 650  # ControlNet, IPAdapter, FluxGuidance
+    layer_latent: 350       # EmptyLatentImage, LatentFromBatch
+    layer_image_input: 350  # LoadImage, VAEEncode/VAEEncodeForInpaint
+    layer_patch: 650        # LoRA nodes (between loader and sampler)
+    layer_sampler: 950      # KSampler, KSamplerAdvanced
+    layer_hires: 1250       # LatentUpscale, Hires KSampler
+    layer_decode: 1550      # VAEDecode
+    layer_output: 1850      # SaveImage, PreviewImage, VHS_VideoCombine
+  vertical_grouping:
+    positive_prompt_y: 100
+    negative_prompt_y: 220
+    latent_y: 340
+    image_input_y: 460
+    controlnet_base_y: 580
+    controlnet_y_gap: 120
+    lora_base_y: 580
+    lora_y_gap: 100
+
+# ── WORKFLOW.JSON STRUCTURE / workflow.json结构 ────────────────
+workflow_json_structure:
+  root_key: "last_node_id"
+  root_value: "(INT: final node ID)"
+  extra_fields:
+    last_updated: "(TIMESTAMP)"
+    version: 0.4
+  node_object_format:
+    id: "(INT)"
+    type: "(class_type string)"
+    pos: "[x, y]"
+    size: "[0, 0]"   # typical; may vary
+    flags: "{}"
+    order: "(INT: same as id usually)"
+    mode: 0
+    inputs:
+      - name: "(input slot name)"
+        type: "(INT: type code)"  # -1 for widget constants
+        widget: "(OPTIONAL: widget name for UI)"
+        link: "(OPTIONAL: link ID for connections)"
+      # ... more inputs
+    outputs:
+      - name: "(output slot name)"
+        type: "(type string: MODEL/CLIP/VAE/LATENT/IMAGE/MASK/CONDITIONING)"
+        links: "(OPTIONAL: [link_ids])"  # populated at connection pass
+        slot_index: 0
+        shape: 3
+    properties:
+      "Node name for S&R": "({title})"
+  # Note: links array is generated separately
+  # 注意: links数组在连接通路单独生成
+
+# ── CONNECTION LINKS / 连接定义 ─────────────────────────────────
+connection_format:
+  link_id: "(INT: sequential from 1)"
+  link_structure: "[from_node_id, from_slot_index, to_node_id, to_slot_index, link_id]"
+  type_code: |     # Input slot type codes / 输入槽类型代码
+    WIDGET_CONSTANT: -1
+    INT: 0
+    FLOAT: 1
+    STRING: 2
+    MODEL: 3
+    CONDITIONING: 4
+    LATENT: 5
+    IMAGE: 6
+    CLIP: 7
+    VAE: 8
+    MASK: 9
+    CONTROL: 10
+
+# ── IR → COMFYUI NODE MAPPING / IR到ComfyUI节点映射 ────────────
+ir_to_node_mapping:
+
+  # --- MODEL LOADERS / 模型加载器 ---
+  model_loader:
+    sd15:  CheckpointLoaderSimple
+    sdxl:  CheckpointLoaderSimple
+    sdxl_turbo: CheckpointLoaderSimple
+    cascade: CheckpointLoaderSimple
+    flux:  UNETLoader       # + DualCLIPLoader (2 CLIPs)
+    sd3:   UNETLoader       # + TripleCLIPLoader
+    video: CheckpointLoaderSimple  # AnimateDiff era / 其他video见video.yaml
+    flux_gguf: UnetLoaderGGUF  # ComfyUI-GGUF custom node
+    flux_gguf_clip: CLIPLoaderGGUF
+    flux_clip_l:  "clip_l.safetensors"
+    flux_clip_t5: "t5xxl_fp16.safetensors or t5xxl_fp8_e4m3fn.safetensors"
+    sd3_clip1: "clip_l.safetensors"
+    sd3_clip2: "clip_g.safetensors"
+    sd3_t5:   "t5xxl_fp16.safetensors or t5xxl_fp8_e4m3fn.safetensors"
+
+  # --- PROMPT ENCODING / 提示词编码 ---
+  prompt_encoding:
+    sd15: CLIPTextEncode
+    sd2:  CLIPTextEncode
+    sdxl: CLIPTextEncodeSDXL
+    sdxl_turbo: CLIPTextEncodeSDXL
+    cascade: CLIPTextEncode
+    flux: CLIPTextEncodeFlux   # takes both CLIP-L and T5 conditioning
+    sd3:  CLIPTextEncodeSD3    # takes all three CLIP outputs
+    video: CLIPTextEncode   # shared across AnimateDiff / 跨AnimateDiff通用
+
+  # --- LATENT PREPARATION / 潜空间准备 ---
+  latent_node:
+    sd15/sd2/sdxl: EmptyLatentImage
+    flux/sd3:       EmptySD3LatentImage   # 16-channel latent
+    cascade:        EmptyLatentImage_StageC
+
+  # --- SAMPLER / 采样器 ---
+  sampler_node:
+    default: KSampler
+    hires_fix: KSamplerAdvanced   # for two-pass (base + refine)
+    flux_cfg_override: "cfg MUST be 1.0; guidance via FluxGuidance node"
+    flux_guidance_node: FluxGuidance
+    flux_guidance_default: 3.5
+
+  # --- VAE / 解码 ---
+  vae_node:
+    default: VAEDecode
+    inpaint_encode: VAEEncodeForInpaint   # R06 enforcement
+
+  # --- OUTPUT / 输出 ---
+  output_node:
+    default: SaveImage
+    preview: PreviewImage
+    video: VHS_VideoCombine   # VideoHelperSuite required
+    animated_webp: SaveAnimatedWEBP
+
+  # --- OPTIONAL MODULES / 可选模块 ---
+  lora_node:
+    class_type: LoraLoader
+    inputs:
+      model: [PREV_MODEL_NODE, 0]
+      clip:  [PREV_MODEL_NODE, 1]  # R07: both must thread
+      lora_name: "{lora_name}.safetensors"
+      strength_model: "{weight_model}"
+      strength_clip: "{weight_clip}"
+    outputs: [MODEL, CLIP]
+    threading_note: >
+      Multiple LoRAs chain sequentially: loader → LoraLoader_1 → LoraLoader_2 → … → sampler.
+      Each LoraLoader receives MODEL and CLIP from the previous node.
+
+  controlnet_node:
+    class_type: ControlNetLoader   # loads model
+    outputs: [CONTROL_NET]
+    apply_node: ControlNetApplyAdvanced
+    apply_inputs:
+      conditioning: "[PREV_CONDITIONING, 0]"
+      control_net: "[CONTROL_NET_LOADER, 0]"
+      image: "[PREPROCESSOR_OUTPUT, 0]"
+      strength: "{strength}"
+      start_percent: "{start_percent}"
+      end_percent: "{end_percent}"
+    chaining: >
+      Multiple ControlNets chain via ControlNetApplyAdvanced.
+      CN1 output → CN2 input_conditioning → CN3 → … → Sampler.
+      Each ControlNetLoader loads its own model.
+
+  controlnet_preprocessor:
+    # From comfyui_controlnet_aux / 来自comfyui_controlnet_aux
+    mapping:
+      none:          "(skip preprocessor, use input image directly)"
+      openpose:      "OpenposePreprocessor"
+      dwpose:        "DWPreprocessor"
+      canny:         "CannyEdgePreprocessor"
+      hed:           "HEDPreprocessor"
+      lineart:       "LineArtPreprocessor"
+      anime_lineart: "AnimeLineArtPreprocessor"
+      depth_midas:   "MiDaSDepthMapPreprocessor"
+      depth_zoe:     "ZoeDepthMapPreprocessor"
+      depth_anything: "DepthAnythingPreprocessor"
+      normal_map:    "BAE-NormalMapPreprocessor"
+      tile:          "TilePreprocessor"
+      scribble:      "FakeScribblePreprocessor"
+      softedge:      "SoftEdgePreprocessor"
+      shuffle:       "ReferencePreprocessor (not standard shuffle)"
+      inpaint:       "(use VAEEncodeForInpaint + GrowMask, no preprocessor)"
+
+  ipadapter_node:
+    class_type: IPAdapterApply
+    inputs:
+      ipadapter: "[IPADAPTER_MODEL_LOADER, 0]"
+      clip_vision: "[CLIPVISION_LOADER, 0]"
+      image: "[IMAGE_LOAD, 0]"
+      model: "[PREV_MODEL, 0]"
+      weight: "{weight}"
+      weight_type: "{weight_type}"
+      combine_embeds: "{combine_embeds}"
+    loader_class: IPAdapterModelLoader
+    clip_vision_loader: CLIPVisionLoader
+
+  hires_fix:
+    upscale_node: LatentUpscale
+    upscale_inputs:
+      samples: "[FIRST_PASS_SAMPLER, 0]"
+      upscale_method: "{upscale_method}"
+      width: "(upscaled width)"
+      height: "(upscaled height)"
+      crop: "center"
+    second_pass_sampler: KSampler
+    second_pass_note: >
+      Connect: LatentUpscale output → KSampler latent_image input.
+      Set denoise≤0.5 and steps=15. Use same prompt.
+      Second pass sampler MODEL input uses same model as first pass.
+
+  face_restore:
+    class_type: FaceDetailer   # from ComfyUI-Impact-Pack
+    inputs:
+      image: "[VAEDECODE, 0]"
+      model: "[PREV_MODEL, 0]"
+      clip: "[PREV_CLIP, 0]"
+      vae: "[PREV_VAE, 0]"
+      positive: "[POSITIVE_ENCODE, 0]"
+      negative: "[NEGATIVE_ENCODE, 0]"
+      sampler_name: "dpmpp_2m"
+      scheduler: "karras"
+      steps: 20
+      cfg: 7.0
+      denoise: 0.5
+
+  animatediff:
+    load_node: AnimateDiffLoaderWithContext
+    model_node: LoadAnimateDiffModel   # loads motion module
+    inputs:
+      model: "[MODEL_FROM_LOADER, 0]"
+      motion_lora: "{motion_lora}"   # optional
+      motion_lora_strength: "{motion_lora_strength}"
+      context_length: "{context_length}"
+      context_stride: "{context_stride}"
+      context_overlap: "{context_overlap}"
+    note: >
+      Insert AnimateDiffLoaderWithContext between base model loader and KSampler.
+      LoRA nodes must come BEFORE AnimateDiffLoaderWithContext in chain.
+      For motion LoRA, use AnimateDiffLoraLoader before AnimateDiffLoaderWithContext.
+
+  upscale_model_node:
+    class_type: UpscaleModelLoader
+    outputs: [UPSCALE_MODEL]
+    apply_node: ImageUpscaleWithModel
+    apply_inputs:
+      upscale_model: "[UPSCALE_MODEL_LOADER, 0]"
+      image: "[VAEDECODE_OR_PREV, 0]"
+
+# ── MODEL-FAMILY SPECIFIC NODE CHAINS / 各模型族节点链 ─────────
+model_chains:
+  sd15_txt2img:
+    nodes:
+      - CheckpointLoaderSimple
+      - CLIPTextEncode (positive)
+      - CLIPTextEncode (negative)
+      - EmptyLatentImage
+      - KSampler
+      - VAEDecode
+      - SaveImage
+    connections:
+      - CheckpointLoaderSimple.MODEL → KSampler.model
+      - CheckpointLoaderSimple.CLIP → both CLIPTextEncode.clip
+      - CheckpointLoaderSimple.VAE → VAEDecode.vae
+      - CLIPTextEncode[+].CONDITIONING → KSampler.positive
+      - CLIPTextEncode[-].CONDITIONING → KSampler.negative
+      - EmptyLatentImage.LATENT → KSampler.latent_image
+      - KSampler.LATENT → VAEDecode.samples
+      - VAEDecode.IMAGE → SaveImage.images
+
+  sdxl_txt2img:
+    nodes:
+      - CheckpointLoaderSimple
+      - CLIPTextEncodeSDXL (positive)
+      - CLIPTextEncodeSDXL (negative)
+      - EmptyLatentImage
+      - KSampler
+      - VAEDecode
+      - SaveImage
+    connections: "(same as sd15, use CLIPTextEncodeSDXL)"
+
+  flux_txt2img:
+    nodes:
+      - DualCLIPLoader (or 2× CLIPLoader)
+      - UNETLoader
+      - CLIPTextEncodeFlux (positive; NO negative)
+      - FluxGuidance
+      - EmptySD3LatentImage
+      - KSampler (cfg=1.0)
+      - VAEDecode
+      - SaveImage
+    connections:
+      - DualCLIPLoader.CLIP → CLIPTextEncodeFlux.clip
+      - CLIPTextEncodeFlux.CONDITIONING → FluxGuidance.conditioning
+      - FluxGuidance.CONDITIONING → KSampler.positive
+      - UNETLoader.MODEL → KSampler.model
+      - KSampler.LATENT → VAEDecode.samples
+      - VAEDecode.IMAGE → SaveImage.images
+
+  flux_gguf_txt2img:
+    diff_from_flux:
+      - "Replace UNETLoader → UnetLoaderGGUF (from ComfyUI-GGUF)"
+      - "Replace DualCLIPLoader → 2× CLIPLoaderGGUF (clip_l + t5xxl)"
+      - "VAE: use VaeLoaderGGUF or standard VAELoader for ae.safetensors"
+
+  sd3_txt2img:
+    nodes:
+      - TripleCLIPLoader (or 3× CLIPLoader)
+      - UNETLoader
+      - CLIPTextEncodeSD3 (positive)
+      - CLIPTextEncodeSD3 (negative)
+      - EmptySD3LatentImage
+      - KSampler
+      - VAEDecode
+      - SaveImage
+    connections: "(CLIPTextEncodeSD3 receives all 3 CLIP outputs)"
+    triple_clip_note: >
+      SD3 uses 3 text encoders: CLIP-L, CLIP-G, T5-XXL.
+      Use CLIPLoader ×3 or TripleCLIPLoader.
+      CLIPTextEncodeSD3 takes all three as inputs.
+
+  video_animatediff:
+    requires_custom_nodes:
+      - "ComfyUI-AnimateDiff-Evolved"
+      - "ComfyUI-VideoHelperSuite"
+    nodes:
+      - CheckpointLoaderSimple
+      - CLIPTextEncode (positive)
+      - CLIPTextEncode (negative)
+      - LoadAnimateDiffModel (motion module)
+      - AnimateDiffLoaderWithContext
+      - EmptyLatentImage
+      - KSampler
+      - VAEDecode
+      - VHS_VideoCombine (or SaveAnimatedWEBP)
+    connections:
+      - CheckpointLoaderSimple.MODEL → AnimateDiffLoaderWithContext.model
+      - LoadAnimateDiffModel.MOTION_MODULE → AnimateDiffLoaderWithContext.motion_model
+      - AnimateDiffLoaderWithContext.MODEL → KSampler.model
+      - KSampler.LATENT → VAEDecode.samples
+      - VAEDecode.IMAGE → VHS_VideoCombine.images
+
+# ── OUTPUT ASSEMBLY RULES / 输出组装规则 ────────────────────────
+output_rules:
+  workflow_json:
+    key: "Contains node graph with UI position data / 含UI坐标的节点图"
+    format: "Full JSON object with nodes object + links array + groups array"
+    load_method: "Drag .json file into ComfyUI canvas / 拖拽.json到ComfyUI画布"
+  workflow_api_json:
+    key: "Minimal JSON for API calls (no position data) / API调用用精简JSON"
+    format: "prompt object with inputs dict"
+    load_method: "POST to ComfyUI /api/prompt endpoint"
+  dependencies_md:
+    required_sections:
+      - models/checkpoints
+      - models/clip
+      - models/vae
+      - models/loras
+      - models/controlnet
+      - models/upscale_models
+      - models/ipadapter
+      - models/clip_vision
+      - custom_nodes
+    each_entry_format: "- `path/to/file.safetensors` → [Download](URL)"
+    custom_node_format: "- Install via ComfyUI-Manager: `Author/RepoName` or git clone URL"
+
+# ── EDGE CASES / 边界情况处理 ──────────────────────────────────
+edge_cases:
+  flux_with_lora:
+    handling: >
+      Flux LoRA files (.safetensors) are loaded via standard LoraLoader.
+      Chain: UNETLoader → LoraLoader(s) → KSampler.
+      Both MODEL and CLIP must flow through LoraLoader.
+      Flux LoRA 可复用标准 LoraLoader，在 UNETLoader 和 KSampler 之间串联。
+
+  sdxl_refiner:
+    handling: >
+      Two-pass using KSamplerAdvanced:
+      Pass 1: base model, denoise=1.0, latent output → VAEDecode(intermediate)
+      Pass 2: refiner model, denoise=0.3, latent input from pass 1.
+      Use same prompt for both passes.
+
+  batch_with_different_seeds:
+    handling: >
+      KSampler seed_input can receive INT from Primitive node (for manual entry)
+      or use -1 for auto-random. For batch, set seed to -1 on each queue.
+
+  composite_workflow:
+    handling: >
+      When workflow combines multiple pipelines (e.g. txt2img + upscale + face restore),
+      nodes are arranged left-to-right with clear visual separation.
+      Add group nodes to visually mark pipeline boundaries.
+
+  missing_custom_node:
+    handling: >
+      If a required custom node package is not installed, the workflow JSON
+      will load but show red "missing node type" messages.
+      ALWAYS list required custom nodes in dependencies.md.
+      Missing-node tolerance: if user explicitly says "I don't have X",
+      offer alternative (e.g. if no VideoHelperSuite, use SaveAnimatedWEBP).

@@ -1,0 +1,119 @@
+{
+  "workflow": {
+    "name": "AI Workflow Generator",
+    "description": "Generate AI image/video workflow from natural language",
+    "version": "1.0.0",
+    "trigger": {
+      "type": "message",
+      "description": "Triggered when user sends a workflow request"
+    }
+  },
+  "nodes": [
+    {
+      "id": "start",
+      "type": "start",
+      "title": "User Input",
+      "description": "Receives user's workflow description",
+      "outputs": [
+        { "name": "user_input", "type": "string" }
+      ]
+    },
+    {
+      "id": "intent_parse",
+      "type": "llm",
+      "title": "Intent Parser / 意图解析",
+      "description": "Parses user input to extract target_platform, model_family, pipeline_type, and modules",
+      "model": "gpt-4o",
+      "temperature": 0.1,
+      "system_prompt": "You are an AI workflow intent parser. Extract from user input: target_platform, model_family, pipeline_type, prompt, and optional modules (LoRA/ControlNet/IPAdapter). Output as JSON.",
+      "inputs": [
+        { "name": "user_text", "source": "start.user_input" }
+      ],
+      "outputs": [
+        { "name": "parsed_intent", "type": "object" }
+      ]
+    },
+    {
+      "id": "ir_build",
+      "type": "llm",
+      "title": "IR Builder / IR构建器",
+      "description": "Builds Internal Representation from parsed intent",
+      "model": "gpt-4o",
+      "temperature": 0.1,
+      "system_prompt_ref": "Load SKILL.md + knowledge/ir_schema.yaml as reference. Build complete IR object.",
+      "inputs": [
+        { "name": "intent", "source": "intent_parse.parsed_intent" }
+      ],
+      "outputs": [
+        { "name": "ir_object", "type": "object" }
+      ]
+    },
+    {
+      "id": "validate_ir",
+      "type": "code",
+      "title": "IR Validator / IR验证器",
+      "description": "Validates IR against 20 rules from rules.yaml",
+      "language": "python",
+      "code_ref": "Load knowledge/validators/rules.yaml and apply all CRITICAL and ADVISORY rules to ir_object",
+      "inputs": [
+        { "name": "ir", "source": "ir_build.ir_object" }
+      ],
+      "outputs": [
+        { "name": "validated_ir", "type": "object" },
+        { "name": "validation_warnings", "type": "array" }
+      ]
+    },
+    {
+      "id": "render_workflow",
+      "type": "llm",
+      "title": "Platform Renderer / 平台渲染器",
+      "description": "Renders IR to target platform format (ComfyUI JSON, A1111 params, Diffusers Python, API request, or prompt)",
+      "model": "gpt-4o",
+      "temperature": 0.1,
+      "system_prompt_ref": "Load appropriate knowledge/platforms/{platform}.yaml and knowledge/models/{model}.yaml. Render IR to platform-native format.",
+      "inputs": [
+        { "name": "ir", "source": "validate_ir.validated_ir" },
+        { "name": "platform", "source": "intent_parse.parsed_intent.target_platform" }
+      ],
+      "outputs": [
+        { "name": "workflow_output", "type": "string" },
+        { "name": "dependencies", "type": "string" },
+        { "name": "instructions", "type": "string" }
+      ]
+    },
+    {
+      "id": "output_format",
+      "type": "llm",
+      "title": "Output Formatter / 输出格式化",
+      "description": "Formats final output with workflow file, dependencies, and usage instructions",
+      "model": "gpt-4o",
+      "temperature": 0.0,
+      "system_prompt": "Format the output as: 1) The workflow file in a code block, 2) dependencies.md list, 3) usage notes. Be concise and instructional.",
+      "inputs": [
+        { "name": "workflow", "source": "render_workflow.workflow_output" },
+        { "name": "deps", "source": "render_workflow.dependencies" },
+        { "name": "instr", "source": "render_workflow.instructions" }
+      ],
+      "outputs": [
+        { "name": "final_output", "type": "string" }
+      ]
+    },
+    {
+      "id": "end",
+      "type": "end",
+      "title": "Output / 输出",
+      "description": "Delivers final workflow to user",
+      "inputs": [
+        { "name": "response", "source": "output_format.final_output" }
+      ]
+    }
+  ],
+  "edges": [
+    { "from": "start", "to": "intent_parse" },
+    { "from": "intent_parse", "to": "ir_build" },
+    { "from": "ir_build", "to": "validate_ir" },
+    { "from": "validate_ir", "to": "render_workflow" },
+    { "from": "render_workflow", "to": "output_format" },
+    { "from": "output_format", "to": "end" }
+  ]
+}

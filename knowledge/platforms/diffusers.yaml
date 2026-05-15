@@ -1,0 +1,500 @@
+# HuggingFace Diffusers Renderer / Diffusers Python渲染器
+# Maps IR → reproducible pipeline.py using HuggingFace Diffusers library
+# 将 IR 映射为可复现的 pipeline.py，使用 HuggingFace Diffusers 库
+
+platform: diffusers
+output_formats: [pipeline.py, requirements.txt, dependencies.md]
+
+# ── RENDERING OVERVIEW / 渲染概述 ──────────────────────────────
+overview: >
+  Diffusers is a Python library. The renderer outputs a self-contained
+  pipeline.py script that can be run directly with `python pipeline.py`.
+  The script handles: model loading, prompt encoding, optional modules
+  (LoRA/ControlNet/IPAdapter), generation, and image saving.
+  /
+  Diffusers是Python库，渲染器输出自包含的pipeline.py脚本，
+  可直接运行`python pipeline.py`。脚本处理模型加载、提示词编码、
+  可选模块（LoRA/ControlNet/IPAdapter）、生成和图像保存。
+
+# ── OUTPUT FILE STRUCTURE / 输出文件结构 ────────────────────────
+output_structure:
+  pipeline_py:
+    sections:
+      1: imports_header        # All necessary imports
+      2: config_section         # User-editable settings at top
+      3: model_loading          # Load base pipeline + move to device
+      4: optional_modules       # LoRA, ControlNet, IPAdapter
+      5: generation             # Build prompts, run pipeline
+      6: output_processing      # Save images, metadata
+    style: "Type-hinted Python 3.10+, follow diffusers API v0.30+ conventions"
+    shebang: "#!/usr/bin/env python3"
+  requirements_txt:
+    format: "One package per line, pin compatible versions"
+    core:
+      - "diffusers>=0.30.0"
+      - "transformers>=4.40.0"
+      - "accelerate>=0.30.0"
+      - "torch>=2.2.0"
+    optional:
+      - "pillow"        # Always needed for image I/O
+      - "safetensors"   # Always needed for safe model loading
+      - "xformers"      # If user wants memory-efficient attention
+      - "peft"          # If using LoRA (PEFT API)
+
+# ── IR → DIFFUSERS PIPELINE MAPPING / IR到Diffusers管线映射 ─────
+pipeline_selection:
+  sd15:
+    class: "StableDiffusionPipeline"
+    import: "from diffusers import StableDiffusionPipeline"
+    unet_type: "UNet2DConditionModel"
+    scheduler_compat: "All standard schedulers"
+  sd2:
+    class: "StableDiffusionPipeline"
+    unet_type: "UNet2DConditionModel"
+    note: "May require prediction_type='v_prediction' in scheduler config"
+  sdxl:
+    class: "StableDiffusionXLPipeline"
+    import: "from diffusers import StableDiffusionXLPipeline"
+    dual_text_encoder: true
+    prompt_embeds_required: true
+  sdxl_turbo:
+    class: "StableDiffusionXLPipeline"
+    guidance_scale: 0.0   # Turbo/Lightning use 0 for no CFG
+    num_inference_steps: 4
+    timesteps: "Use LCMScheduler with appropriate timesteps"
+  flux:
+    class: "FluxPipeline"
+    import: "from diffusers import FluxPipeline"
+    text_encoder: "T5 + CLIP-L dual, handled internally"
+    guidance_scale: "{flux_guidance}"  # Flux uses guidance, not cfg
+    note: "FluxPipeline handles dual text encoder loading internally"
+  flux_fill:
+    class: "FluxFillPipeline"
+    import: "from diffusers import FluxFillPipeline"
+    image_required: true
+    mask_required: true
+  flux_control:
+    class: "FluxControlPipeline"
+    import: "from diffusers import FluxControlPipeline"
+    control_image_required: true
+  sd3:
+    class: "StableDiffusion3Pipeline"
+    import: "from diffusers import StableDiffusion3Pipeline"
+    triple_text_encoder: true
+    note: "T5 text encoder is optional (loaded by default if available)"
+
+# ── GENERATION FUNCTION TEMPLATE / 生成函数模板 ─────────────────
+generation_template:
+  standard: |
+    image = pipe(
+        prompt="{prompt}",
+        negative_prompt="{negative_prompt}",
+        num_inference_steps={steps},
+        guidance_scale={cfg},
+        width={width},
+        height={height},
+        generator=generator,
+    ).images[0]
+
+  sdxl: |
+    image = pipe(
+        prompt="{prompt}",
+        negative_prompt="{negative_prompt}",
+        num_inference_steps={steps},
+        guidance_scale={cfg},
+        width={width},
+        height={height},
+        generator=generator,
+        original_size=(1024, 1024),
+        target_size=(1024, 1024),
+        crops_coords_top_left=(0, 0),
+    ).images[0]
+
+  flux: |
+    image = pipe(
+        prompt="{prompt}",
+        num_inference_steps={steps},
+        guidance_scale={flux_guidance},
+        width={width},
+        height={height},
+        generator=generator,
+    ).images[0]
+
+  img2img: |
+    init_image = Image.open("{input_image}").convert("RGB")
+    init_image = init_image.resize(({width}, {height}))
+    image = pipe(
+        prompt="{prompt}",
+        negative_prompt="{negative_prompt}",
+        image=init_image,
+        num_inference_steps={steps},
+        guidance_scale={cfg},
+        strength={denoise},
+        generator=generator,
+    ).images[0]
+
+  inpaint: |
+    init_image = Image.open("{input_image}").convert("RGB")
+    mask_image = Image.open("{input_mask}").convert("L")
+    init_image = init_image.resize(({width}, {height}))
+    mask_image = mask_image.resize(({width}, {height}))
+    image = pipe(
+        prompt="{prompt}",
+        negative_prompt="{negative_prompt}",
+        image=init_image,
+        mask_image=mask_image,
+        num_inference_steps={steps},
+        guidance_scale={cfg},
+        strength={denoise},
+        generator=generator,
+    ).images[0]
+
+# ── OPTIONAL MODULES / 可选模块代码 ─────────────────────────────
+modules:
+
+  lora:
+    loading_code: |
+      # Load LoRA weights
+      pipe.load_lora_weights(
+          pretrained_model_name_or_path="{lora_path}",
+          weight_name="{lora_filename}",
+          adapter_name="{lora_name}"
+      )
+    multiple_loras: |
+      # Multiple LoRA loading with PEFT
+      pipe.load_lora_weights("{path1}", weight_name="{file1}", adapter_name="lora1")
+      pipe.load_lora_weights("{path2}", weight_name="{file2}", adapter_name="lora2")
+      pipe.set_adapters(["lora1", "lora2"], adapter_weights=[{w1}, {w2}])
+    pipe_method:
+      standard: pipe.load_lora_weights
+      peft_fuse: "pipe.fuse_lora() after loading / 加载后调用fuse_lora()可提升推理速度"
+    flux_lora: |
+      # Flux LoRA via PEFT
+      pipe.load_lora_weights(
+          pretrained_model_name_or_path="{lora_ckpt_path}",
+          weight_name="{lora_filename}"
+      )
+
+  controlnet:
+    loading_code: |
+      from diffusers import ControlNetModel
+
+      controlnet = ControlNetModel.from_pretrained(
+          "{controlnet_model_path}",
+          torch_dtype=torch.float16
+      )
+      pipe = StableDiffusionControlNetPipeline(
+          **base_pipe.components,
+          controlnet=controlnet
+      )
+    image_prep: |
+      control_image = Image.open("{input_image}").convert("RGB")
+      control_image = control_image.resize(({width}, {height}))
+    generation: |
+      image = pipe(
+          prompt="{prompt}",
+          negative_prompt="{negative_prompt}",
+          image=control_image,
+          num_inference_steps={steps},
+          guidance_scale={cfg},
+          controlnet_conditioning_scale={strength},
+          generator=generator,
+      ).images[0]
+    multi_controlnet: |
+      from diffusers import StableDiffusionControlNetPipeline
+
+      controlnet_1 = ControlNetModel.from_pretrained("{path1}", torch_dtype=torch.float16)
+      controlnet_2 = ControlNetModel.from_pretrained("{path2}", torch_dtype=torch.float16)
+
+      pipe = StableDiffusionControlNetPipeline(
+          **base_pipe.components,
+          controlnet=[controlnet_1, controlnet_2]
+      )
+      # Pass multiple images and scales as lists
+      image = pipe(
+          prompt=...,
+          image=[control_image_1, control_image_2],
+          controlnet_conditioning_scale=[{s1}, {s2}],
+          ...
+      ).images[0]
+    flux_controlnet: |
+      # Flux ControlNet is handled by FluxControlPipeline directly
+      pipe = FluxControlPipeline.from_pretrained(
+          "{flux_model_path}",
+          controlnet=ControlNetModel.from_pretrained("{cn_path}"),
+          torch_dtype=torch.bfloat16
+      )
+
+  ipadapter:
+    loading_code: |
+      pipe.load_ip_adapter(
+          pretrained_model_name_or_path="{ip_adapter_path}",
+          weight_name="{ip_adapter_filename}",
+          subfolder=""
+      )
+    generation: |
+      ip_image = Image.open("{ip_image}").convert("RGB")
+
+      pipe.set_ip_adapter_scale({weight})
+      image = pipe(
+          prompt="{prompt}",
+          negative_prompt="{negative_prompt}",
+          ip_adapter_image=ip_image,
+          num_inference_steps={steps},
+          guidance_scale={cfg},
+          generator=generator,
+      ).images[0]
+
+  face_restore:
+    note: >
+      Diffusers does not have built-in face restoration.
+      Add post-processing with GFPGAN or CodeFormer.
+    code: |
+      # Post-generation face restoration
+      from facexlib.utils.face_restoration_helper import FaceRestoreHelper
+      # OR use: from basicsr.archs.codeformer_arch import CodeFormer
+      # Manual implementation required — see GFPGAN/CodeFormer docs
+      # 需要手动集成GFPGAN或CodeFormer后处理
+
+  upscale:
+    note: >
+      Diffusers does not have built-in upscale pipeline for all models.
+      Use separate upscaler after generation.
+    code: |
+      from PIL import Image
+      # Post-generation upscale
+      image = image.resize(({upscaled_w}, {upscaled_h}), resample=Image.LANCZOS)
+      # For AI upscale, use:
+      # from realesrgan import RealESRGANer
+    stable_diffusion_upscale: |
+      from diffusers import StableDiffusionUpscalePipeline
+      upscale_pipe = StableDiffusionUpscalePipeline.from_pretrained(
+          "stabilityai/stable-diffusion-x4-upscaler",
+          torch_dtype=torch.float16
+      ).to(device)
+      upscaled = upscale_pipe(prompt=prompt, image=lowres_image).images[0]
+
+  video:
+    animatediff: |
+      from diffusers import AnimateDiffPipeline
+      from diffusers import MotionAdapter
+      from diffusers.schedulers import EulerDiscreteScheduler
+    svd: |
+      from diffusers import StableVideoDiffusionPipeline
+    note: >
+      Video generation in Diffusers is evolving rapidly.
+      Check diffusers documentation for latest video pipeline API.
+      AnimateDiff / SVD / CogVideoX are supported as of diffusers 0.30+.
+
+# ── DEVICE & DTYPE CONVENTION / 设备与精度约定 ──────────────────
+device_config: |
+  import torch
+
+  device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
+
+  # Model dtype based on device
+  if device == "cuda":
+      dtype = torch.float16
+      pipe.enable_model_cpu_offload()  # VRAM-efficient
+  elif device == "mps":
+      dtype = torch.float32     # MPS doesn't support fp16 well
+      pipe = pipe.to(device)
+  else:
+      dtype = torch.float32
+      pipe = pipe.to(device)
+
+  # Optional memory optimization
+  # pipe.enable_xformers_memory_efficient_attention()
+  # pipe.enable_attention_slicing()
+  # pipe.enable_vae_slicing()     # for large images
+  # pipe.enable_vae_tiling()
+
+# ── SEED & REPRODUCIBILITY / 种子与可复现性 ─────────────────────
+seed_handling: |
+  import torch
+  import numpy as np
+  import random
+
+  seed = {seed}  # -1 for random, else fixed
+  if seed != -1:
+      generator = torch.Generator(device=device).manual_seed(seed)
+      torch.manual_seed(seed)
+      np.random.seed(seed)
+      random.seed(seed)
+  else:
+      generator = torch.Generator(device=device)
+
+# ── BATCH GENERATION / 批量生成 ──────────────────────────────────
+batch_template: |
+  num_images = {batch_size}
+  images = pipe(
+      prompt="{prompt}",
+      negative_prompt="{negative_prompt}",
+      num_inference_steps={steps},
+      guidance_scale={cfg},
+      width={width},
+      height={height},
+      num_images_per_prompt=num_images,
+      generator=generator,
+  ).images
+
+  for i, img in enumerate(images):
+      img.save(f"output_{{i:04d}}.png")
+
+# ── METADATA EMBEDDING / 元数据嵌入 ──────────────────────────────
+metadata: |
+  from PIL.PngImagePlugin import PngInfo
+
+  metadata = PngInfo()
+  metadata.add_text("parameters", json.dumps({
+      "prompt": prompt,
+      "negative_prompt": negative_prompt,
+      "steps": steps,
+      "cfg": cfg,
+      "seed": seed,
+      "model": "{model_name}",
+      "size": f"{width}x{height}",
+      "sampler": "{sampler_name}",
+      "scheduler": "{scheduler}"
+  }))
+  image.save(f"output.png", pnginfo=metadata)
+
+# ── COMPLETE PIPELINE.PY SKELETON / 完整脚本骨架 ────────────────
+pipeline_skeleton: |
+  #!/usr/bin/env python3
+  """
+  AI Image Generation Pipeline / AI图像生成管线
+  Generated by AI Workflow Generator / 由AI工作流生成器生成
+  Platform: HuggingFace Diffusers
+  Model: {model_family} — {model_name}
+  """
+
+  import torch
+  import json
+  from PIL import Image, PngImagePlugin
+  from datetime import datetime
+
+  # === CONFIGURATION ===
+  PROMPT = "{prompt}"
+  NEGATIVE_PROMPT = "{negative_prompt}"
+  MODEL_ID = "{model_id_or_path}"
+  STEPS = {steps}
+  CFG = {cfg}
+  WIDTH = {width}
+  HEIGHT = {height}
+  SEED = {seed}
+  SAMPLER_NAME = "{sampler_name}"
+  OUTPUT_FILE = "output.png"
+
+  # === MAIN ===
+  def main():
+      device = "cuda" if torch.cuda.is_available() else "cpu"
+      dtype = torch.float16 if device == "cuda" else torch.float32
+
+      print(f"[{datetime.now()}] Loading pipeline on {device}...")
+
+      # Load pipeline
+      from diffusers import {pipeline_class}
+      pipe = {pipeline_class}.from_pretrained(
+          MODEL_ID,
+          torch_dtype=dtype,
+          # variant="fp16",  # uncomment for fp16 variant models
+      )
+
+      if device == "cuda":
+          pipe.enable_model_cpu_offload()
+      else:
+          pipe = pipe.to(device)
+
+      # Optional: load LoRA / ControlNet / IPAdapter
+      # {optional_modules_loading}
+
+      # Set up generator for reproducible seeds
+      generator = None
+      if SEED != -1:
+          generator = torch.Generator(device=device).manual_seed(SEED)
+
+      print(f"[{datetime.now()}] Generating...")
+
+      # Generate
+      image = pipe(
+          prompt=PROMPT,
+          negative_prompt=NEGATIVE_PROMPT,
+          num_inference_steps=STEPS,
+          guidance_scale=CFG,
+          width=WIDTH,
+          height=HEIGHT,
+          generator=generator,
+      ).images[0]
+
+      # Embed metadata
+      metadata = PngImagePlugin.PngInfo()
+      metadata.add_text("parameters", json.dumps({{
+          "prompt": PROMPT,
+          "negative_prompt": NEGATIVE_PROMPT,
+          "steps": STEPS,
+          "cfg": CFG,
+          "seed": SEED,
+          "model": MODEL_ID,
+          "size": f"{{WIDTH}}x{{HEIGHT}}"
+      }}))
+      image.save(OUTPUT_FILE, pnginfo=metadata)
+
+      print(f"[{datetime.now()}] Done! Saved to {{OUTPUT_FILE}}")
+
+  if __name__ == "__main__":
+      main()
+
+# ── MODEL_ID REFERENCE / 常用模型HuggingFace ID ─────────────────
+model_id_reference:
+  sd15_base: "runwayml/stable-diffusion-v1-5"
+  sd2_base: "stabilityai/stable-diffusion-2-1-base"
+  sdxl_base: "stabilityai/stable-diffusion-xl-base-1.0"
+  flux_dev: "black-forest-labs/FLUX.1-dev"
+  flux_schnell: "black-forest-labs/FLUX.1-schnell"
+  flux_fill_dev: "black-forest-labs/FLUX.1-Fill-dev"
+  flux_canny_dev: "black-forest-labs/FLUX.1-Canny-dev"
+  flux_depth_dev: "black-forest-labs/FLUX.1-Depth-dev"
+  sd3_medium: "stabilityai/stable-diffusion-3.5-medium"
+  sd3_large: "stabilityai/stable-diffusion-3.5-large"
+  svd: "stabilityai/stable-video-diffusion-img2vid-xt"
+  svd_xt_1_1: "stabilityai/stable-video-diffusion-img2vid-xt-1-1"
+
+# ── EDGE CASES / 边界情况 ──────────────────────────────────────
+edge_cases:
+  local_checkpoint:
+    handling: >
+      If user specifies a local .safetensors file instead of HuggingFace ID,
+      use pipe.from_single_file("{local_path}.safetensors") instead of
+      pipe.from_pretrained("{model_id}").
+      Single-file loading requires diffusers >= 0.24.0.
+      Add comment noting the local path in pipeline.py.
+
+  sdxl_refiner:
+    handling: >
+      Two-stage: base pipe for initial generation → refiner pipe for detail.
+      Use denoising_end=0.8 on base, denoising_start=0.8 on refiner.
+      Pass latent from base → refiner using pipe_refiner(
+          image=base_output,
+          denoising_start=0.8,
+          denoising_end=1.0, ...
+      )
+
+  flux_quantized:
+    handling: >
+      For NF4/FP8 quantized Flux, use from_pretrained with appropriate variant
+      or torch_dtype. Example: FluxPipeline.from_pretrained(MODEL_ID, torch_dtype=torch.bfloat16).
+      NF4 quant requires bitsandbytes: `pip install bitsandbytes`.
+
+  cpu_generation:
+    handling: >
+      CPU generation is supported but very slow.
+      Use torch_dtype=torch.float32, skip model_cpu_offload, use .to("cpu").
+      Add warning comment: "# WARNING: CPU generation may take 5-10min per image"
+      Consider suggesting user use attention_slicing for CPU.
+
+  batch_processing:
+    handling: >
+      For multiple prompts, wrap generation in a loop.
+      Read prompts from a text file or pass as command-line arguments.
+      Output files named with index: output_0001.png, output_0002.png, ...

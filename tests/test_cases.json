@@ -1,0 +1,210 @@
+[
+  {
+    "id": "TC001",
+    "name": "SDXL txt2img + 2 LoRAs → ComfyUI",
+    "description": "Standard ComfyUI workflow with SDXL and two LoRAs",
+    "input": "帮我生成一个 SDXL 文生图工作流，加两个 LoRA：add_detail 权重0.8，epiNoiseoffset 权重0.6。平台 ComfyUI。提示词：a beautiful landscape, masterpiece",
+    "expected": {
+      "target_platform": "comfyui",
+      "model_family": "sdxl",
+      "pipeline_type": "txt2img",
+      "has_CheckpointLoaderSimple": true,
+      "has_LoraLoader_count": 2,
+      "has_KSampler": true,
+      "has_SaveImage": true,
+      "valid_json": true,
+      "all_node_ids_unique": true,
+      "all_node_ids_sequential": true,
+      "lora_chain_order_correct": true,
+      "model_and_clip_both_threaded": true,
+      "prompt_contains_landscape": true,
+      "output_has_dependencies_md": true
+    }
+  },
+  {
+    "id": "TC002",
+    "name": "Flux.1-dev + ControlNet depth → ComfyUI",
+    "description": "Flux workflow with ControlNet, must enforce no negative prompt",
+    "input": "Flux.1-dev with ControlNet depth for ComfyUI. Prompt: 'a cyberpunk city at night'. Generate workflow.",
+    "expected": {
+      "target_platform": "comfyui",
+      "model_family": "flux",
+      "pipeline_type": "txt2img",
+      "has_UNETLoader": true,
+      "has_DualCLIPLoader": true,
+      "has_FluxGuidance": true,
+      "has_ControlNetLoader": true,
+      "has_EmptySD3LatentImage": true,
+      "has_SaveImage": true,
+      "ksampler_cfg_is_1": true,
+      "no_negative_prompt": true,
+      "valid_json": true
+    }
+  },
+  {
+    "id": "TC003",
+    "name": "SD1.5 inpaint → ComfyUI",
+    "description": "Inpaint workflow must use VAEEncodeForInpaint (R06)",
+    "input": "SD1.5 inpaint workflow for ComfyUI. Input image: photo.png, mask: mask.png. Prompt: 'restore old photo'",
+    "expected": {
+      "target_platform": "comfyui",
+      "model_family": "sd15",
+      "pipeline_type": "inpaint",
+      "has_CheckpointLoaderSimple": true,
+      "has_VAEEncodeForInpaint": true,
+      "has_KSampler": true,
+      "has_SaveImage": true,
+      "no_VAEEncode_used_for_encoding_input": true,
+      "valid_json": true
+    }
+  },
+  {
+    "id": "TC004",
+    "name": "SD1.5 simples → A1111 params",
+    "description": "Simple A1111 params with LoRA embedding in prompt",
+    "input": "Generate A1111 params for SD1.5 txt2img with LoRA 'add_detail' weight 0.7. Prompt: 'a cat sitting on a chair'",
+    "expected": {
+      "target_platform": "a1111",
+      "model_family": "sd15",
+      "pipeline_type": "txt2img",
+      "has_prompt_field": true,
+      "has_lora_syntax_in_prompt": true,
+      "lora_format_is_correct": true,
+      "has_sampler_name": true,
+      "has_steps": true,
+      "has_cfg_scale": true,
+      "has_seed": true,
+      "has_width": true,
+      "has_height": true,
+      "size_divisible_by_8": true,
+      "valid_params_json": true
+    }
+  },
+  {
+    "id": "TC005",
+    "name": "Flux schnell → A1111 Forge",
+    "description": "Flux schnell on Forge with no negative prompt",
+    "input": "A1111 Forge workflow with Flux schnell. Prompt: 'a futuristic robot'. Steps: 4",
+    "expected": {
+      "target_platform": "a1111",
+      "model_family": "flux",
+      "pipeline_type": "txt2img",
+      "has_prompt_field": true,
+      "no_negative_prompt_or_empty": true,
+      "steps_is_4_or_less": true,
+      "valid_params_json": true
+    }
+  },
+  {
+    "id": "TC006",
+    "name": "SDXL → Diffusers pipeline.py",
+    "description": "Generate Diffusers Python script for SDXL",
+    "input": "Generate Diffusers pipeline.py for SDXL. Prompt: 'a red sports car on a mountain road'",
+    "expected": {
+      "target_platform": "diffusers",
+      "model_family": "sdxl",
+      "pipeline_type": "txt2img",
+      "output_is_python": true,
+      "imports_StableDiffusionXLPipeline": true,
+      "has_device_config": true,
+      "has_from_pretrained": true,
+      "has_png_metadata": true,
+      "has_output_save": true,
+      "output_has_requirements_txt": true
+    }
+  },
+  {
+    "id": "TC007",
+    "name": "SD3 → Replicate API",
+    "description": "Replicate API request for SD3.5",
+    "input": "Generate a Replicate API request for SD3.5 large. Prompt: 'an astronaut riding a horse on Mars'",
+    "expected": {
+      "target_platform": "replicate",
+      "model_family": "sd3",
+      "pipeline_type": "txt2img",
+      "has_request_json": true,
+      "has_example_sh": true,
+      "has_model_owner_path": true,
+      "has_auth_header_in_sh": true,
+      "valid_request_json": true
+    }
+  },
+  {
+    "id": "TC008",
+    "name": "SDXL → Midjourney prompt",
+    "description": "Cross-platform: SDXL workflow specs → Midjourney /imagine prompt",
+    "input": "Convert this SDXL workflow to a Midjourney prompt: 1024x1024, 25 steps, cfg 7, dpmpp_2m karras. Subject: 'a serene mountain lake at sunrise'",
+    "expected": {
+      "target_platform": "midjourney",
+      "has_imagine_prompt": true,
+      "has_aspect_ratio_param": true,
+      "has_subject_in_prompt": true,
+      "no_technical_params_in_prompt": true,
+      "no_quality_tag_spam": true,
+      "prompt_reads_naturally": true
+    }
+  },
+  {
+    "id": "TC009",
+    "name": "Video workflow → ComfyUI",
+    "description": "AnimateDiff txt2vid for ComfyUI",
+    "input": "AnimateDiff txt2vid workflow for ComfyUI. Model: SD1.5, motion module: mm_sd_v15_v2. Prompt: 'fire burning in a fireplace'",
+    "expected": {
+      "target_platform": "comfyui",
+      "model_family": "video",
+      "pipeline_type": "txt2vid",
+      "has_CheckpointLoaderSimple": true,
+      "has_LoadAnimateDiffModel": true,
+      "has_AnimateDiffLoaderWithContext": true,
+      "has_VideoCombiner_or_SaveAnimatedWEBP": true,
+      "valid_json": true,
+      "has_dependencies_md_with_custom_nodes": true
+    }
+  },
+  {
+    "id": "TC010",
+    "name": "Flux → Stability AI API",
+    "description": "Stability AI API request for SD3 Ultra (Flux not available on Stability API, should fall back)",
+    "input": "Generate Stability AI API request. Model: SD3 Ultra. Prompt: 'a glass orb containing a galaxy'. Aspect ratio: 16:9",
+    "expected": {
+      "target_platform": "stability",
+      "has_api_endpoint": true,
+      "has_aspect_ratio": true,
+      "has_form_data_or_multipart": true,
+      "valid_request": true,
+      "has_auth_instruction": true
+    }
+  },
+  {
+    "id": "TC011",
+    "name": "Multi-ControlNet chain → ComfyUI",
+    "description": "SDXL with OpenPose + Canny ControlNets, chained correctly",
+    "input": "SDXL with OpenPose and Canny ControlNets for ComfyUI. Prompt: 'a dancer in motion'",
+    "expected": {
+      "target_platform": "comfyui",
+      "model_family": "sdxl",
+      "pipeline_type": "txt2img",
+      "has_CheckpointLoaderSimple": true,
+      "has_ControlNetLoader_count": 2,
+      "has_ControlNetApplyAdvanced_count": 2,
+      "controlnets_are_chained_not_parallel": true,
+      "valid_json": true
+    }
+  },
+  {
+    "id": "TC012",
+    "name": "SDXL with Refiner → Diffusers",
+    "description": "Two-stage SDXL base + refiner pipeline",
+    "input": "Diffusers pipeline for SDXL with refiner. Base+refiner two-pass. Prompt: 'hyperrealistic portrait of an elderly man'",
+    "expected": {
+      "target_platform": "diffusers",
+      "model_family": "sdxl",
+      "pipeline_type": "txt2img",
+      "has_base_pipeline": true,
+      "has_refiner_pipeline": true,
+      "has_denoising_end_param": true,
+      "has_denoising_start_param": true,
+      "output_is_python": true
+    }
+  }
+]

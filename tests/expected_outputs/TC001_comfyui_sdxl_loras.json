@@ -1,0 +1,36 @@
+{
+  "meta": {
+    "test_id": "TC001",
+    "description": "SDXL txt2img + 2 LoRAs → ComfyUI expected output sample",
+    "format": "workflow.json"
+  },
+  "expected_workflow_summary": {
+    "total_nodes": 9,
+    "node_classes": [
+      "CheckpointLoaderSimple",
+      "CLIPTextEncodeSDXL",
+      "CLIPTextEncodeSDXL",
+      "LoraLoader",
+      "LoraLoader",
+      "EmptyLatentImage",
+      "KSampler",
+      "VAEDecode",
+      "SaveImage"
+    ],
+    "key_connections": [
+      "CheckpointLoaderSimple.MODEL → LoraLoader_1.model",
+      "LoraLoader_1.MODEL → LoraLoader_2.model",
+      "LoraLoader_2.MODEL → KSampler.model",
+      "CheckpointLoaderSimple.CLIP → LoraLoader_1.clip",
+      "LoraLoader_1.CLIP → LoraLoader_2.clip",
+      "LoraLoader_2.CLIP → CLIPTextEncodeSDXL(+).clip",
+      "KSampler.LATENT → VAEDecode.samples",
+      "VAEDecode.IMAGE → SaveImage.images"
+    ]
+  },
+  "expected_dependencies": {
+    "checkpoints": ["juggernautXL_v9.safetensors"],
+    "loras": ["add_detail.safetensors", "epiNoiseoffset_v2.safetensors"],
+    "custom_nodes": []
+  }
+}

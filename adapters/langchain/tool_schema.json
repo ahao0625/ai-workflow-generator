@@ -1,0 +1,47 @@
+{
+  "name": "ai_workflow_generator",
+  "description": "Generate AI image/video generation workflow files for ComfyUI, A1111, Diffusers, Replicate, Stability AI, Midjourney, DALL-E, and other platforms.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "description": {
+        "type": "string",
+        "description": "Natural language description of the desired workflow. Include target platform, model details, and feature requirements."
+      },
+      "target_platform": {
+        "type": "string",
+        "enum": ["comfyui", "a1111", "diffusers", "replicate", "stability", "midjourney", "dalle", "ideogram", "prompt_only"],
+        "description": "Target platform for workflow output."
+      },
+      "model_family": {
+        "type": "string",
+        "enum": ["sd15", "sdxl", "sdxl_turbo", "flux", "sd3", "video"],
+        "description": "Base model family to use."
+      },
+      "output_format": {
+        "type": "string",
+        "enum": ["file", "json_string", "code_block"],
+        "default": "file",
+        "description": "Output format preference."
+      }
+    },
+    "required": ["description"]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "workflow": {
+        "type": "string",
+        "description": "Generated workflow content (JSON, Python code, or prompt text)"
+      },
+      "dependencies": {
+        "type": "string",
+        "description": "Markdown list of required model files and download URLs"
+      },
+      "instructions": {
+        "type": "string",
+        "description": "Usage notes, parameter tuning advice, and troubleshooting"
+      }
+    }
+  }
+}

@@ -1,0 +1,387 @@
+# REST API Renderer / REST API渲染器
+# Maps IR → API request JSON for Replicate, Stability AI, and other cloud APIs
+# 将 IR 映射为 Replicate、Stability AI 等云服务的 API 请求 JSON
+
+platform: api
+output_formats: [request.json, example.sh, dependencies.md]
+supported_providers: [replicate, stability, fal, runware]
+
+# ── RENDERING OVERVIEW / 渲染概述 ──────────────────────────────
+overview: >
+  Cloud APIs abstract away GPU infrastructure. Each provider has its own JSON
+  schema for requests. The renderer outputs a request.json (ready to POST)
+  and an example.sh (curl one-liner). The user provides an API key separately.
+  /
+  云API抽象了GPU基础设施，每个提供方有自己的JSON请求格式。
+  渲染器输出request.json（可直接POST）和example.sh（curl示例），
+  API Key由用户自行提供。
+
+# ── PROVIDER DETECTION / 提供方识别 ────────────────────────────
+provider_detection:
+  user_signals:
+    replicate:  ["replicate", "r8.im", "replicate.com"]
+    stability:  ["stability", "stability.ai", "stable diffusion api"]
+    fal:        ["fal.ai", "fal", "fast api"]
+    runware:    ["runware", "runware.ai"]
+  default: "replicate"   # Most general-purpose / 最通用
+  note: "If no provider specified, ask user or default to Replicate"
+
+# ── IR → REPLICATE REQUEST / IR到Replicate请求 ──────────────────
+replicate:
+  endpoint: "POST https://api.replicate.com/v1/models/{model_owner}/{model_name}/predictions"
+  auth: "Authorization: Bearer $REPLICATE_API_TOKEN"
+  content_type: "Content-Type: application/json"
+  headers: |
+    -H "Authorization: Bearer $REPLICATE_API_TOKEN" \
+    -H "Content-Type: application/json" \
+    -H "Prefer: wait"     # wait for completion (up to 60s)
+  request_structure:
+    version: "{model_version_hash}"   # use :latest tag or specific hash
+    input:
+      prompt:                  "{prompt}"
+      negative_prompt:         "{negative_prompt}"  # omit for Flux
+      width:                   "{width}"
+      height:                  "{height}"
+      num_inference_steps:     "{steps}"
+      guidance_scale:          "{cfg}"
+      seed:                    "{seed}"
+      num_outputs:             "{batch_size}"
+      scheduler:               "{translated_scheduler}"
+      lora_scale:              "{lora_weight}"         # single LoRA
+      extra_lora_scale:        "{lora_weight_2}"       # second LoRA
+      lora_urls:               "{lora_download_urls}"  # for custom LoRA
+      controlnet_type:         "{canny/depth/openpose/...}"
+      controlnet_conditioning_scale: "{strength}"
+      ip_adapter_scale:        "{ipadapter_weight}"
+      lora_weights:            "{url_to_custom_lora}"
+      disable_safety_checker:  false
+      output_format:           "png"
+      output_quality:          90
+
+  model_mapping:
+    sd15:  "stability-ai/stable-diffusion"
+    sdxl:  "stability-ai/sdxl"
+    flux_dev:  "black-forest-labs/flux-dev"
+    flux_schnell: "black-forest-labs/flux-schnell"
+    flux_pro: "black-forest-labs/flux-pro"
+    sd3_medium: "stability-ai/stable-diffusion-3.5-medium"
+    sd3_large:  "stability-ai/stable-diffusion-3.5-large"
+    sdxl_refiner: "stability-ai/sdxl"  # use refiner params
+    animatediff: "lucataco/animate-diff"
+    svd:    "stability-ai/stable-video-diffusion"
+
+  custom_lora_support: >
+    Replicate supports LoRA via lora_urls parameter for some models.
+    Pass public URL to .safetensors file. Not all models support this.
+    For heavy LoRA usage, prefer local ComfyUI or Diffusers.
+
+  webhook:
+    optional: true
+    format: "https://your-server.com/webhook"
+    note: "Receive POST callback when generation completes / 接收生成完成回调"
+
+  streaming:
+    note: "Replicate supports Server-Sent Events for progress. Use 'Prefer: wait' header or subscribe to prediction status."
+
+# ── IR → STABILITY AI REQUEST / IR到Stability AI请求 ────────────
+stability:
+  endpoint_default: "POST https://api.stability.ai/v2beta/stable-image/generate/sd3"
+  endpoints:
+    sd3_core:    "v2beta/stable-image/generate/sd3"
+    sd3_ultra:   "v2beta/stable-image/generate/ultra"
+    sdxl_core:   "v2beta/stable-image/generate/core"
+    control_sketch: "v2beta/stable-image/control/sketch"
+    control_structure: "v2beta/stable-image/control/structure"
+    upscale:     "v2beta/stable-image/upscale/fast"
+    upscale_creative: "v2beta/stable-image/upscale/creative"
+    inpaint:     "v2beta/stable-image/edit/inpaint"
+    outpaint:    "v2beta/stable-image/edit/outpaint"
+    erase:       "v2beta/stable-image/edit/erase"
+    search_replace: "v2beta/stable-image/edit/search-and-replace"
+    video:       "v2beta/stable-image/generate/svd"
+  auth: "Authorization: Bearer $STABILITY_API_KEY"
+  form_data: true  # Stability uses multipart/form-data, not JSON for most endpoints
+  content_type: "multipart/form-data"
+
+  sd3_request:
+    form_fields:
+      prompt:            "{prompt}"
+      negative_prompt:   "{negative_prompt}"
+      mode:              "text-to-image"
+      aspect_ratio:      "{computed_aspect_ratio}"  # e.g. "1:1", "16:9", "9:16"
+      seed:              "{seed}"
+      output_format:     "png"
+    supported_ratios:
+      - "1:1"    # 1024x1024
+      - "16:9"   # 1344x768
+      - "21:9"   # 1536x640
+      - "3:2"    # 1152x896
+      - "2:3"    # 896x1152
+      - "5:8"    # 704x1280 (portrait)
+      - "4:5"    # 768x1024
+      - "9:16"   # 768x1344
+      - "9:21"   # 640x1536
+    note: "Stability API uses aspect ratios, not exact dimensions / Stability API使用长宽比而非精确尺寸"
+
+  core_request:
+    form_fields:
+      prompt:            "{prompt}"
+      negative_prompt:   "{negative_prompt}"
+      style_preset:      "({style_preset})"   # optional
+      output_format:     "png"
+    style_presets:
+      - "3d-model"
+      - "analog-film"
+      - "anime"
+      - "cinematic"
+      - "comic-book"
+      - "digital-art"
+      - "enhance"
+      - "fantasy-art"
+      - "isometric"
+      - "line-art"
+      - "low-poly"
+      - "modeling-compound"
+      - "neon-punk"
+      - "origami"
+      - "photographic"
+      - "pixel-art"
+      - "tile-texture"
+
+  ultra_request:
+    form_fields:
+      prompt:        "{prompt}"
+      negative_prompt: "{negative_prompt}"
+      aspect_ratio:  "{computed_aspect_ratio}"
+      style_preset:  "{style_preset}"
+      output_format: "png"
+
+  control_request:
+    form_fields:
+      image:           "@{input_image}"
+      prompt:          "{prompt}"
+      negative_prompt: "{negative_prompt}"
+      control_strength: "{strength}"
+      output_format:   "png"
+
+  inpaint_request:
+    form_fields:
+      image:       "@{input_image}"
+      mask:        "@{input_mask}"
+      prompt:      "{prompt}"
+      grow_mask:   10
+      output_format: "png"
+
+  upscale_request:
+    form_fields:
+      image:        "@{input_image}"
+      output_format: "png"
+
+# ── IR → FAL.AI REQUEST / IR到Fal.ai请求 ────────────────────────
+fal:
+  endpoint_format: "POST https://fal.run/{model_path}"
+  auth: "Authorization: Key $FAL_KEY"
+  content_type: "application/json"
+  models:
+    flux_dev:    "fal-ai/flux/dev"
+    flux_schnell: "fal-ai/flux/schnell"
+    flux_pro:    "fal-ai/flux-pro/v1.1-ultra"
+    sd3:         "fal-ai/stable-diffusion-v3-medium"
+    sd3_turbo:   "fal-ai/fast-turbo-diffusion"
+    sdxl:        "fal-ai/fast-sdxl"
+    animatediff: "fal-ai/animatediff"
+  request_structure: |
+    {
+      "prompt": "{prompt}",
+      "negative_prompt": "{negative_prompt}",
+      "image_size": "landscape_4_3",
+      "num_inference_steps": {steps},
+      "guidance_scale": {cfg},
+      "num_images": {batch_size},
+      "enable_safety_checker": true,
+      "seed": {seed}
+    }
+  image_size_opts:
+    - square_hd
+    - square
+    - portrait_4_3
+    - portrait_16_9
+    - landscape_4_3
+    - landscape_16_9
+  lora_support: >
+    Fal supports LoRA  via loras field: [{"path": "url", "scale": 0.8}].
+    Specify full URL to LoRA file in loras array.
+    Flux models support this on fal.ai.
+
+# ── IR → RUNWARE REQUEST / IR到Runware请求 ──────────────────────
+runware:
+  endpoint: "wss://ws-api.runware.ai/v1"   # WebSocket-based API
+  auth: "Authorization: Bearer $RUNWARE_API_KEY"
+  protocol: "WebSocket"
+  note: >
+    Runware uses WebSocket connections, not REST. This is unusual.
+    Output a Python example_ws.py instead of example.sh for this provider.
+    Runware使用WebSocket连接，非REST。对此提供方输出example_ws.py而非example.sh。
+  request_message: |
+    [
+      {{
+        "taskType": "authentication",
+        "apiKey": "YOUR_RUNWARE_API_KEY"
+      }},
+      {{
+        "taskUUID": "generation-1",
+        "taskType": "imageInference",
+        "model": "{model_id}",
+        "positivePrompt": "{prompt}",
+        "negativePrompt": "{negative_prompt}",
+        "width": {width},
+        "height": {height},
+        "numberResults": {batch_size},
+        "steps": {steps},
+        "CFGScale": {cfg},
+        "sampler": "{sampler_name}",
+        "scheduler": "{scheduler}",
+        "seed": {seed},
+        "outputFormat": "PNG",
+        "outputType": "URL",
+        "useCache": true
+      }}
+    ]
+
+# ── TOGETHER AI / 其他API ───────────────────────────────────────
+togetherai:
+  endpoint: "POST https://api.together.xyz/v1/images/generations"
+  auth: "Authorization: Bearer $TOGETHER_API_KEY"
+  models:
+    flux_schnell: "black-forest-labs/FLUX.1-schnell-Free"
+    flux_dev:     "black-forest-labs/FLUX.1-dev"
+    sd3:          "stabilityai/stable-diffusion-3.5-large"
+    sd3_medium:   "stabilityai/stable-diffusion-3.5-medium"
+    sdxl_base:    "stabilityai/stable-diffusion-xl-base-1.0"
+  request_structure: |
+    {
+      "model": "{model_name}",
+      "prompt": "{prompt}",
+      "negative_prompt": "{negative_prompt}",
+      "width": {width},
+      "height": {height},
+      "steps": {steps},
+      "n": {batch_size},
+      "seed": {seed},
+      "response_format": "b64_json"
+    }
+
+# ── SDSHELF / 国内API适配 ───────────────────────────────────────
+liblibai:
+  endpoint: "LiblibAI API (liblibai.com)"
+  note: "Chinese Stable Diffusion platform / 国内StableDiffusion平台"
+  model_support: [sd15, sdxl, flux]
+  features: "Online generation, model library, LoRA hosting / 在线生图、模型库、LoRA托管"
+
+clipdrop:
+  endpoint: "Stability AI Clipdrop API"
+  auth: "x-api-key: $CLIPDROP_API_KEY"
+  note: "Simplified REST API for quick generation / 简化REST API"
+
+# ── OUTPUT ASSEMBLY RULES / 输出组装规则 ────────────────────────
+output_rules:
+  request_json:
+    format: "Valid JSON matching provider schema"
+    file_name: "request.json"
+    usage: "Modify fields as needed, then POST to provider endpoint"
+
+  example_sh:
+    format: "Single curl command with auth env var"
+    template: |
+      #!/bin/bash
+      # API Request Example / API请求示例
+      # Run: export REPLICATE_API_TOKEN="your_token" && bash example.sh
+
+      curl -s -X POST \\
+        -H "Authorization: Bearer $REPLICATE_API_TOKEN" \\
+        -H "Content-Type: application/json" \\
+        -H "Prefer: wait" \\
+        -d @request.json \\
+        https://api.replicate.com/v1/models/{model_owner}/{model_name}/predictions \\
+        | python3 -m json.tool
+
+  dependencies_md:
+    sections:
+      - api_key_setup
+      - model_provider_info
+      - billing_notes
+      - output_format_notes
+    api_key_setup_template: |
+      ## API Key Setup / API密钥设置
+      ```bash
+      export REPLICATE_API_TOKEN="r8_xxxx"
+      # Sign up at: https://replicate.com/account
+      ```
+
+# ── ASYNC PREDICTION HANDLING / 异步预测处理 ────────────────────
+async_handling:
+  replicate_polling: |
+    # Poll for completion
+    while true; do
+      STATUS=$(curl -s -H "Authorization: Bearer $REPLICATE_API_TOKEN" "$PREDICTION_URL" | jq -r '.status')
+      case $STATUS in
+        succeeded)
+          curl -s -H "Authorization: Bearer $REPLICATE_API_TOKEN" "$PREDICTION_URL" | jq -r '.output[]' | while read url; do
+            curl -s -o "output_$(date +%s).png" "$url"
+          done
+          break
+          ;;
+        failed|canceled)
+          echo "Prediction failed: $(curl -s -H "Authorization: Bearer $REPLICATE_API_TOKEN" "$PREDICTION_URL" | jq '.error')"
+          exit 1
+          ;;
+        *)
+          sleep 2
+          ;;
+      esac
+    done
+
+# ── COST ESTIMATION / 费用估算提示 ──────────────────────────────
+cost_notes:
+  note_for_user: >
+    Include approximate cost estimate per generation in usage notes.
+    Most APIs charge per image. Replicate charges per second of GPU time.
+    Stability AI charges per credit (different for Core vs Ultra vs SD3).
+    Mention: "Estimated cost: ~{cost} per generation. Check provider pricing."
+
+# ── API RESPONSE FORMATS / 响应格式 ─────────────────────────────
+response_handling:
+  replicate_polling_response: |
+    {
+      "id": "prediction_id",
+      "status": "processing|succeeded|failed|canceled",
+      "output": ["https://replicate.delivery/..."],
+      "error": null,
+      "logs": "..."
+    }
+  replicate_webhook_response: "POST to your webhook URL with same payload as above"
+  stability_response: "Binary image data in response body (Content-Type: image/png)"
+
+# ── HUMAN-FACING SUMMARY / 面向用户的摘要 ───────────────────────
+human_summary_template: |
+  ---
+  ## API Request Ready / API请求已就绪
+
+  **Provider**: {provider_name}
+  **Model**: {model_name}
+  **Estimated cost**: ~{cost} per generation
+
+  ### Quick start / 快速开始:
+  1. Set API key: `export {PROVIDER}_API_TOKEN="your_key"`
+  2. Run: `bash example.sh`
+  3. Output: output.png
+
+  ### Parameters / 参数:
+  - Prompt: "{prompt}"
+  - Size: {width}x{height}
+  - Steps: {steps}, CFG: {cfg}
+  - Seed: {seed}
+
+  ### Customization / 自定义:
+  Edit fields in request.json and re-run example.sh
+  See `<provider> API docs` for all supported parameters.

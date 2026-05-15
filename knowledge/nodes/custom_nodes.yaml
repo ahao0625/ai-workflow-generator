@@ -1,0 +1,340 @@
+# Custom / Ecosystem Nodes / 生态扩展节点库
+# All require installation via ComfyUI-Manager (or manual git clone)
+# 所有节点均需通过ComfyUI-Manager安装
+
+# ══════════════════════════════════════════════════════════════
+# CONTROLNET PREPROCESSORS / ControlNet预处理器
+# Package: comfyui_controlnet_aux
+# URL: https://github.com/Fannovel16/comfyui_controlnet_aux
+# ══════════════════════════════════════════════════════════════
+
+controlnet_aux:
+  package: comfyui_controlnet_aux
+  install: "ComfyUI Manager → Install Custom Nodes → comfyui_controlnet_aux"
+
+  DWPreprocessor:
+    desc: "DWPose body keypoints (best pose detection) / DWPose人体关键点（最佳姿势检测）"
+    inputs: [image: IMAGE, detect_hand: ENUM, detect_body: ENUM, detect_face: ENUM]
+    outputs: [IMAGE]
+    use_with: "control_v11p_sd15_openpose / control-lora-openposeXL2"
+
+  OpenposePreprocessor:
+    desc: "OpenPose body + face / OpenPose身体+面部"
+    inputs: [image: IMAGE, detect_hand: ENUM, detect_body: ENUM, detect_face: ENUM]
+    outputs: [IMAGE]
+
+  CannyEdgePreprocessor:
+    desc: "Canny edge detection / Canny边缘检测"
+    inputs: [image: IMAGE, low_threshold: INT [default 100], high_threshold: INT [default 200]]
+    outputs: [IMAGE]
+    use_with: "control_v11p_sd15_canny / controlnet-canny-sdxl"
+
+  HEDPreprocessor:
+    desc: "HED soft edge / HED软边缘"
+    inputs: [image: IMAGE, safe: ENUM]
+    outputs: [IMAGE]
+
+  LineArtPreprocessor:
+    desc: "Realistic line art / 写实线稿提取"
+    inputs: [image: IMAGE, coarse: ENUM]
+    outputs: [IMAGE]
+
+  AnimeLineArtPreprocessor:
+    desc: "Anime line art / 动漫线稿提取"
+    inputs: [image: IMAGE]
+    outputs: [IMAGE]
+
+  MiDaS_DepthMapPreprocessor:
+    desc: "MiDaS depth estimation / MiDaS深度估计"
+    inputs: [image: IMAGE, a: FLOAT, bg_threshold: FLOAT]
+    outputs: [IMAGE]
+
+  ZoeDepthMapPreprocessor:
+    desc: "Zoe depth estimation (more accurate) / Zoe深度估计（更精确）"
+    inputs: [image: IMAGE]
+    outputs: [IMAGE]
+
+  DepthAnythingPreprocessor:
+    desc: "Depth Anything v2 (state of art depth) / Depth Anything v2深度估计"
+    inputs: [image: IMAGE, resolution: INT]
+    outputs: [IMAGE]
+
+  NormalMapPreprocessor:
+    desc: "BAE normal map / BAE法线贴图"
+    inputs: [image: IMAGE]
+    outputs: [IMAGE]
+
+  TilePreprocessor:
+    desc: "Tile preprocessor (for tiled upscale) / 分块预处理（分块超分用）"
+    inputs: [image: IMAGE, pyrUp_iters: INT [default 3]]
+    outputs: [IMAGE]
+
+  Scribble_XDoG_Preprocessor:
+    desc: "XDoG scribble-like lines / XDoG涂鸦风格线条"
+    inputs: [image: IMAGE]
+    outputs: [IMAGE]
+
+  SAMPreprocessor:
+    desc: "SAM segmentation / SAM分割预处理"
+    inputs: [image: IMAGE]
+    outputs: [IMAGE]
+
+  MediaPipe_FaceMeshPreprocessor:
+    desc: "Face mesh keypoints / 面部网格关键点"
+    inputs: [image: IMAGE, max_faces: INT, min_confidence: FLOAT]
+    outputs: [IMAGE]
+
+# ══════════════════════════════════════════════════════════════
+# IPADAPTER / IP-Adapter图像参考
+# Package: ComfyUI_IPAdapter_plus
+# URL: https://github.com/cubiq/ComfyUI_IPAdapter_plus
+# ══════════════════════════════════════════════════════════════
+
+ipadapter_plus:
+  package: ComfyUI_IPAdapter_plus
+  required_models:
+    clip_vision: "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors"
+    clip_vision_source: "https://huggingface.co/h94/IP-Adapter"
+    ipadapter_sd15: "ip-adapter_sd15.safetensors"
+    ipadapter_sdxl: "ip-adapter_sdxl.safetensors"
+    ipadapter_faceid: "ip-adapter-faceid_sd15.bin"
+    models_path: "models/ipadapter/"
+
+  IPAdapterUnifiedLoader:
+    desc: "Load IPAdapter + CLIP Vision together / 一体式加载IPAdapter和CLIP Vision"
+    inputs: [model: MODEL, preset: ENUM]
+    outputs: [MODEL, ipadapter: IPADAPTER]
+    note: "Preset auto-selects right model / preset自动选择对应模型"
+
+  IPAdapterAdvanced:
+    desc: "Apply IPAdapter with advanced options / 高级IPAdapter应用"
+    inputs:
+      model: MODEL
+      ipadapter: IPADAPTER
+      image: IMAGE
+      weight: FLOAT [default 1.0]
+      weight_type: ENUM [linear, ease_in, ease_out, ease_in-out, reverse_in-out,
+                         weak_input, strong_input, style_transfer, prompt_is_more_important]
+      start_at: FLOAT [0.0..1.0]
+      end_at: FLOAT [0.0..1.0, default 1.0]
+      combine_embeds: ENUM [concat, add, subtract, average, norm_average]
+      image_negative: IMAGE (optional)
+      attn_mask: MASK (optional)
+      clip_vision: CLIP_VISION (optional)
+    outputs: [MODEL, image_negative: IMAGE]
+
+  IPAdapterFaceID:
+    desc: "Face identity preservation / 人脸ID保持"
+    inputs: [model: MODEL, ipadapter: IPADAPTER, image: IMAGE, weight: FLOAT,
+             weight_faceidv2: FLOAT, weight_type: ENUM, combine_embeds: ENUM,
+             start_at: FLOAT, end_at: FLOAT, clip_vision: CLIP_VISION]
+    outputs: [MODEL]
+
+  IPAdapterCombineEmbeds:
+    desc: "Combine multiple reference images / 合并多个参考图像嵌入"
+    inputs: [embed1: EMBEDS, ..., method: ENUM]
+    outputs: [EMBEDS]
+
+# ══════════════════════════════════════════════════════════════
+# INSTANTID / InstantID身份保持
+# Package: ComfyUI_InstantID
+# URL: https://github.com/cubiq/ComfyUI_InstantID
+# ══════════════════════════════════════════════════════════════
+
+instantid:
+  package: ComfyUI_InstantID
+  required_models:
+    instantid: "ip-adapter.bin (InstantID model)"
+    controlnet: "ControlNetModel (for face structure)"
+    models_path: "models/instantid/"
+
+  InstantIDModelLoader:
+    inputs: [instantid_file: STRING]
+    outputs: [instantid: INSTANTID]
+
+  InstantIDFaceAnalysis:
+    inputs: [provider: ENUM [CPU, CUDA, ROCM]]
+    outputs: [FACEANALYSIS]
+
+  ApplyInstantID:
+    inputs: [instantid: INSTANTID, insightface: FACEANALYSIS, control_net: CONTROL_NET,
+             image: IMAGE, model: MODEL, positive: CONDITIONING, negative: CONDITIONING,
+             ip_weight: FLOAT, cn_strength: FLOAT, start_at: FLOAT, end_at: FLOAT]
+    outputs: [MODEL, positive: CONDITIONING, negative: CONDITIONING]
+
+# ══════════════════════════════════════════════════════════════
+# IMPACT PACK / Impact Pack（人脸细化/分割）
+# Package: ComfyUI-Impact-Pack
+# URL: https://github.com/ltdrdata/ComfyUI-Impact-Pack
+# ══════════════════════════════════════════════════════════════
+
+impact_pack:
+  package: ComfyUI-Impact-Pack
+
+  FaceDetailer:
+    desc: "Detect and re-generate faces at higher detail / 自动检测并高清重绘人脸"
+    inputs:
+      image: IMAGE
+      model: MODEL
+      clip: CLIP
+      vae: VAE
+      positive: CONDITIONING
+      negative: CONDITIONING
+      bbox_detector: BBOX_DETECTOR
+      seed: INT
+      steps: INT
+      cfg: FLOAT
+      sampler_name: ENUM
+      scheduler: ENUM
+      denoise: FLOAT [default 0.5]
+      feather: INT [default 5]
+      noise_mask: BOOLEAN
+      force_inpaint: BOOLEAN
+      bbox_threshold: FLOAT [default 0.5]
+      bbox_dilation: INT [default 4]
+      bbox_crop_factor: FLOAT [default 3.0]
+      guide_size: FLOAT [default 384]
+    outputs: [image: IMAGE, cropped_refined_list: IMAGE, ...]
+
+  SAMLoader:
+    desc: "Load SAM segmentation model / 加载SAM分割模型"
+    inputs: [model_name: STRING, device_mode: ENUM]
+    outputs: [SAM_MODEL]
+
+  GroundingDinoModelLoader:
+    desc: "Load GroundingDINO detection model / 加载GroundingDINO检测模型"
+    inputs: [model_name: STRING]
+    outputs: [GROUNDING_DINO_MODEL]
+
+  BboxDetectorSEGS:
+    inputs: [bbox_detector: BBOX_DETECTOR, image: IMAGE, threshold: FLOAT, dilation: INT,
+             crop_factor: FLOAT, drop_size: INT, labels: STRING]
+    outputs: [segs: SEGS]
+
+  UltralyticsDetectorProvider:
+    desc: "YOLOv8-based face/person detector / 基于YOLOv8的人脸/人体检测"
+    inputs: [model_name: STRING]
+    outputs: [BBOX_DETECTOR, SEGM_DETECTOR]
+
+# ══════════════════════════════════════════════════════════════
+# ANIMATEDIFF EVOLVED / AnimateDiff进化版
+# Package: ComfyUI-AnimateDiff-Evolved
+# URL: https://github.com/Kosinkadink/ComfyUI-AnimateDiff-Evolved
+# ══════════════════════════════════════════════════════════════
+
+animatediff_evolved:
+  package: ComfyUI-AnimateDiff-Evolved
+
+  AnimateDiffLoaderWithContext:
+    desc: "Load AnimateDiff motion module / 加载AnimateDiff运动模块"
+    inputs: [model: MODEL, model_name: STRING, beta_schedule: ENUM,
+             context_options: CONTEXT_OPTIONS (opt), motion_lora: MOTION_LORA (opt)]
+    outputs: [MODEL]
+
+  ADE_AnimateDiffUniformContextOptions:
+    desc: "Set context window for long videos / 设置长视频上下文窗口"
+    inputs: [context_length: INT, context_stride: INT, context_overlap: INT,
+             context_schedule: ENUM, closed_loop: BOOLEAN]
+    outputs: [CONTEXT_OPTIONS]
+
+  ADE_AnimateDiffLoRALoader:
+    desc: "Load motion LoRA / 加载运动LoRA"
+    inputs: [lora_name: STRING, strength: FLOAT]
+    outputs: [MOTION_LORA]
+
+# ══════════════════════════════════════════════════════════════
+# VIDEO HELPER SUITE / 视频辅助套件
+# Package: ComfyUI-VideoHelperSuite
+# URL: https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite
+# ══════════════════════════════════════════════════════════════
+
+video_helper_suite:
+  package: ComfyUI-VideoHelperSuite
+
+  VHS_VideoCombine:
+    desc: "Combine frames into video / 将帧合并为视频"
+    inputs:
+      images: IMAGE
+      frame_rate: FLOAT [default 8]
+      loop_count: INT [default 0, 0=infinite]
+      filename_prefix: STRING
+      format: ENUM [image/gif, image/webp, video/h264-mp4, video/h265-mp4, video/webm]
+      pingpong: BOOLEAN
+      save_output: BOOLEAN
+    outputs: [VHS_FILENAMES]
+    terminal_node: true
+
+  VHS_LoadVideo:
+    desc: "Load video file / 加载视频文件"
+    inputs: [video: STRING, force_rate: INT, force_size: ENUM, frame_load_cap: INT]
+    outputs: [IMAGE, VHS_VIDEOINFO, audio: AUDIO]
+
+  VHS_DuplicateImages:
+    inputs: [images: IMAGE, multiply_by: INT]
+    outputs: [IMAGE]
+
+# ══════════════════════════════════════════════════════════════
+# COMFYUI-GGUF / GGUF量化加载
+# Package: ComfyUI-GGUF
+# URL: https://github.com/city96/ComfyUI-GGUF
+# ══════════════════════════════════════════════════════════════
+
+comfyui_gguf:
+  package: ComfyUI-GGUF
+
+  UnetLoaderGGUF:
+    desc: "Load GGUF quantized UNET / 加载GGUF量化UNET"
+    inputs: [unet_name: STRING]
+    outputs: [MODEL]
+    use_for: "Flux/SD3 GGUF files / Flux/SD3的.gguf文件"
+
+  CLIPLoaderGGUF:
+    desc: "Load GGUF quantized CLIP / 加载GGUF量化CLIP"
+    inputs: [clip_name: STRING, type: ENUM]
+    outputs: [CLIP]
+
+# ══════════════════════════════════════════════════════════════
+# LAYER DIFFUSE / 透明背景生成
+# Package: ComfyUI-LayerDiffuse
+# URL: https://github.com/layerdiffusion/ComfyUI-LayerDiffuse
+# ══════════════════════════════════════════════════════════════
+
+layerdiffuse:
+  package: ComfyUI-LayerDiffuse
+
+  LayeredDiffusionApply:
+    desc: "Generate transparent background images / 生成透明背景图像"
+    inputs: [model: MODEL, config: ENUM, weight: FLOAT]
+    outputs: [MODEL]
+
+  LayeredDiffusionDecode:
+    inputs: [samples: LATENT, images: IMAGE, sd_version: ENUM, sub_batch_size: INT]
+    outputs: [image: IMAGE, mask: MASK]
+
+# ══════════════════════════════════════════════════════════════
+# EFFICIENCY NODES / 效率节点
+# Package: efficiency-nodes-comfyui
+# URL: https://github.com/jags111/efficiency-nodes-comfyui
+# ══════════════════════════════════════════════════════════════
+
+efficiency_nodes:
+  package: efficiency-nodes-comfyui
+
+  EfficientLoader:
+    desc: "All-in-one loader (checkpoint+lora+clip+vae) / 一体化加载器"
+    inputs: [ckpt_name, vae_name, clip_skip, lora_name, lora_model_strength,
+             lora_clip_strength, positive, negative, token_normalization,
+             weight_interpretation, empty_latent_width, empty_latent_height, batch_size]
+    outputs: [MODEL, CONDITIONING(+), CONDITIONING(-), LATENT, VAE, CLIP, DEPENDENCIES]
+
+  LoRA_Stacker:
+    desc: "Stack multiple LoRAs easily / 便捷叠加多个LoRA"
+    inputs: [input_mode: ENUM, lora_count: INT, lora_name_i: STRING,
+             lora_wt_i: FLOAT, model_str_i: FLOAT, clip_str_i: FLOAT]
+    outputs: [LORA_STACK]
+
+  ControlNet_Stacker:
+    desc: "Stack multiple ControlNets / 便捷叠加多个ControlNet"
+    inputs: [control_net: CONTROL_NET, image: IMAGE, strength: FLOAT,
+             start_percent: FLOAT, end_percent: FLOAT, cnet_stack: CNET_STACK (opt)]
+    outputs: [CNET_STACK]

@@ -1,0 +1,112 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AI Workflow Generator API",
+    "description": "Generate AI image/video workflow files for various platforms. Mirror schema for Dify Custom Tool.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://your-service.com/api/v1"
+    }
+  ],
+  "paths": {
+    "/generate_workflow": {
+      "post": {
+        "summary": "Generate AI image workflow",
+        "operationId": "generateWorkflow",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["description"],
+                "properties": {
+                  "description": {
+                    "type": "string",
+                    "description": "Workflow requirement description"
+                  },
+                  "target_platform": {
+                    "type": "string",
+                    "enum": ["comfyui", "a1111", "diffusers", "replicate", "stability", "midjourney", "dalle", "ideogram"],
+                    "default": "comfyui"
+                  },
+                  "model_family": {
+                    "type": "string",
+                    "enum": ["sd15", "sdxl", "sdxl_turbo", "flux", "sd3", "video"],
+                    "default": "sdxl"
+                  },
+                  "pipeline_type": {
+                    "type": "string",
+                    "enum": ["txt2img", "img2img", "inpaint", "txt2vid", "img2vid"],
+                    "default": "txt2img"
+                  },
+                  "prompt": { "type": "string" },
+                  "negative_prompt": { "type": "string" },
+                  "width": { "type": "integer" },
+                  "height": { "type": "integer" },
+                  "steps": { "type": "integer" },
+                  "cfg": { "type": "number" },
+                  "seed": { "type": "integer", "default": -1 },
+                  "loras": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": { "type": "string" },
+                        "weight_model": { "type": "number", "default": 0.8 },
+                        "weight_clip": { "type": "number", "default": 0.8 }
+                      }
+                    }
+                  },
+                  "controlnets": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "model": { "type": "string" },
+                        "preprocessor": { "type": "string" },
+                        "strength": { "type": "number", "default": 1.0 }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Generated workflow output",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "workflow": {
+                      "type": "string",
+                      "description": "Workflow file content (JSON/Python/prompt)"
+                    },
+                    "dependencies": {
+                      "type": "string",
+                      "description": "Markdown dependency list"
+                    },
+                    "instructions": {
+                      "type": "string",
+                      "description": "Usage instructions"
+                    },
+                    "output_format": {
+                      "type": "string",
+                      "description": "Platform-specific output format identifier"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

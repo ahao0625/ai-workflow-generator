@@ -1,0 +1,143 @@
+# Dify Tool Manifest / Dify工具描述
+# Install in Dify → Tools → Custom → Import YAML
+# 在Dify → 工具 → 自定义 → 导入YAML
+
+identity:
+  name: ai_workflow_generator
+  author: ai-workflow-generator
+  label:
+    en_US: AI Workflow Generator
+    zh_Hans: AI工作流生成器
+  description:
+    en_US: >
+      Generate ready-to-use AI image/video generation workflow files for ComfyUI,
+      A1111/Forge, HuggingFace Diffusers, Replicate API, Stability AI, Midjourney,
+      DALL·E, and other platforms.
+    zh_Hans: >
+      为ComfyUI、A1111/Forge、Diffusers、Replicate API、Stability AI、Midjourney、
+      DALL·E等平台生成即用型AI图像/视频工作流文件。
+  icon: "🖼️"
+  tags: [image-generation, stable-diffusion, comfyui, workflow]
+
+parameters:
+  - name: description
+    type: string
+    required: true
+    label:
+      en_US: Workflow Description
+      zh_Hans: 工作流描述
+    description:
+      en_US: >
+        Describe the workflow you want. Include target platform (ComfyUI/A1111/Diffusers/API),
+        model (SD1.5/SDXL/Flux/SD3/video), features (LoRA/ControlNet/IPAdapter/etc.),
+        and any specific requirements. Example: "SDXL txt2img with 2 LoRAs for ComfyUI"
+      zh_Hans: >
+        描述您想要的工作流。包括目标平台(ComfyUI/A1111/Diffusers/API)、
+        模型(SD1.5/SDXL/Flux/SD3/video)、功能(LoRA/ControlNet/IPAdapter等)、
+        以及任何具体要求。如："SDXL文生图，加两个LoRA，ComfyUI平台"
+
+  - name: target_platform
+    type: select
+    required: false
+    label:
+      en_US: Target Platform
+      zh_Hans: 目标平台
+    options:
+      - value: comfyui
+        label:
+          en_US: ComfyUI
+          zh_Hans: ComfyUI
+      - value: a1111
+        label:
+          en_US: A1111 / Forge
+          zh_Hans: A1111 / Forge
+      - value: diffusers
+        label:
+          en_US: HuggingFace Diffusers
+          zh_Hans: Diffusers (Python)
+      - value: replicate
+        label:
+          en_US: Replicate API
+          zh_Hans: Replicate API
+      - value: stability
+        label:
+          en_US: Stability AI API
+          zh_Hans: Stability AI API
+      - value: midjourney
+        label:
+          en_US: Midjourney
+          zh_Hans: Midjourney
+      - value: dalle
+        label:
+          en_US: DALL·E
+          zh_Hans: DALL·E
+    default: comfyui
+
+  - name: model_family
+    type: select
+    required: false
+    label:
+      en_US: Model Family
+      zh_Hans: 模型族
+    options:
+      - value: sd15
+        label:
+          en_US: SD 1.5
+          zh_Hans: SD 1.5
+      - value: sdxl
+        label:
+          en_US: SDXL
+          zh_Hans: SDXL
+      - value: flux
+        label:
+          en_US: Flux
+          zh_Hans: Flux
+      - value: sd3
+        label:
+          en_US: SD3 / 3.5
+          zh_Hans: SD3 / 3.5
+      - value: video
+        label:
+          en_US: Video (AnimateDiff/SVD)
+          zh_Hans: 视频 (AnimateDiff/SVD)
+    default: sdxl
+
+  - name: pipeline_type
+    type: select
+    required: false
+    label:
+      en_US: Pipeline Type
+      zh_Hans: 管线类型
+    options:
+      - value: txt2img
+        label:
+          en_US: Text to Image
+          zh_Hans: 文生图
+      - value: img2img
+        label:
+          en_US: Image to Image
+          zh_Hans: 图生图
+      - value: inpaint
+        label:
+          en_US: Inpaint
+          zh_Hans: 局部重绘
+      - value: txt2vid
+        label:
+          en_US: Text to Video
+          zh_Hans: 文生视频
+    default: txt2img
+
+  - name: options
+    type: paragraph
+    required: false
+    label:
+      en_US: Additional Options (JSON)
+      zh_Hans: 附加选项 (JSON)
+    description:
+      en_US: >
+        Optional JSON with: prompt (required if not in description),
+        negative_prompt, loras [{name,weight}], controlnets [{type,strength}],
+        hires_fix {enabled,upscale_by}, width, height, steps, cfg, seed.
+      zh_Hans: >
+        可选JSON，字段包括prompt、negative_prompt、loras、controlnets、
+        hires_fix、width、height、steps、cfg、seed等。

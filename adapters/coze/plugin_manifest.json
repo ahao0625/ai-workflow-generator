@@ -1,0 +1,58 @@
+{
+  "manifest": {
+    "manifest_version": "1.0",
+    "name": "AI Workflow Generator",
+    "description": "Generate AI image/video workflow files for ComfyUI, A1111, Diffusers, and APIs.",
+    "version": "1.0.0",
+    "author": "AI Workflow Generator Team",
+    "icon": "data:image/svg+xml,..."
+  },
+  "tools": [
+    {
+      "name": "generate_workflow",
+      "description": "Generate an AI image/video generation workflow from natural language description. Supports ComfyUI JSON, A1111 params, Diffusers Python, Replicate API requests, and Midjourney prompts.",
+      "parameters": {
+        "type": "object",
+        "required": ["description"],
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Workflow description including platform, model, and feature requirements. Example: 'SDXL txt2img with 2 LoRAs for ComfyUI'"
+          },
+          "target_platform": {
+            "type": "string",
+            "enum": ["comfyui", "a1111", "diffusers", "replicate", "stability", "midjourney", "dalle", "ideogram"],
+            "description": "Target platform for workflow output",
+            "default": "comfyui"
+          },
+          "model_family": {
+            "type": "string",
+            "enum": ["sd15", "sdxl", "sdxl_turbo", "flux", "sd3", "video"],
+            "description": "Base model family to use",
+            "default": "sdxl"
+          },
+          "pipeline_type": {
+            "type": "string",
+            "enum": ["txt2img", "img2img", "inpaint", "txt2vid", "img2vid"],
+            "description": "Type of generation pipeline",
+            "default": "txt2img"
+          },
+          "prompt": {
+            "type": "string",
+            "description": "Text prompt for generation"
+          },
+          "negative_prompt": {
+            "type": "string",
+            "description": "Negative prompt (not used for Flux models)"
+          },
+          "options_json": {
+            "type": "string",
+            "description": "Optional JSON string with additional parameters: loras, controlnets, hires_fix, width, height, steps, cfg, seed"
+          }
+        }
+      }
+    }
+  ],
+  "triggers": [],
+  "permissions": []
+}

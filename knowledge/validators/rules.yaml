@@ -1,0 +1,214 @@
+# Validation Rules / 验证规则
+# Severity: CRITICAL (block render) | ADVISORY (warn + note in output)
+# 严重度: CRITICAL（阻止渲染）| ADVISORY（警告并在输出中注明）
+
+rules:
+
+  # ── MODEL × FEATURE COMPATIBILITY / 模型与功能兼容性 ──────────────
+
+  R01:
+    id: R01
+    severity: CRITICAL
+    name: "Flux no negative prompt / Flux无负向提示词"
+    condition: model_family == "flux" AND negative_prompt is set AND negative_prompt != ""
+    action: >
+      Remove negative_prompt from IR silently.
+      Add note: "Flux does not support negative prompts — field removed.
+      / Flux不支持负向提示词，已自动移除。"
+
+  R02:
+    id: R02
+    severity: CRITICAL
+    name: "SDXL-Turbo low steps / SDXL-Turbo低步数"
+    condition: model_family == "sdxl_turbo" AND steps > 8
+    action: >
+      Warn: "SDXL-Turbo/Lightning works best with 1-4 steps and cfg≈1.
+      Current steps={steps} may produce over-processed results.
+      / SDXL-Turbo/Lightning最佳步数为1-4，cfg≈1。"
+
+  R03:
+    id: R03
+    severity: CRITICAL
+    name: "Flux schnell low steps / Flux-schnell低步数"
+    condition: model_family == "flux" AND model_name contains "schnell" AND steps > 8
+    action: >
+      Warn: "flux1-schnell is distilled for 1-4 steps. Higher steps waste compute.
+      / flux1-schnell专为1-4步设计，更高步数浪费算力。"
+
+  R04:
+    id: R04
+    severity: ADVISORY
+    name: "SD3 cfg recommendation / SD3的cfg建议"
+    condition: model_family == "sd3" AND (cfg < 3.0 OR cfg > 7.0)
+    action: >
+      Warn: "SD3/3.5 typically works best with cfg 3.5–5.5.
+      / SD3/3.5通常在cfg 3.5–5.5时效果最佳。"
+
+  R05:
+    id: R05
+    severity: CRITICAL
+    name: "Video model requires video pipeline / 视频模型需要视频管线"
+    condition: model_family == "video" AND pipeline_type NOT IN [img2vid, txt2vid]
+    action: >
+      Error: "Video models require pipeline_type=img2vid or txt2vid.
+      / 视频模型需要pipeline_type=img2vid或txt2vid。"
+
+  # ── COMFYUI NODE GRAPH RULES / ComfyUI节点图规则 ──────────────────
+
+  R06:
+    id: R06
+    severity: CRITICAL
+    name: "Inpaint must use VAEEncodeForInpaint"
+    condition: target_platform == "comfyui" AND pipeline_type == "inpaint"
+    action: >
+      Ensure VAEEncodeForInpaint is used instead of VAEEncode for the input image.
+      Using plain VAEEncode for inpainting produces corrupted masks.
+      确保使用VAEEncodeForInpaint而非VAEEncode处理输入图像。
+
+  R07:
+    id: R07
+    severity: CRITICAL
+    name: "LoRA must thread both MODEL and CLIP"
+    condition: target_platform == "comfyui" AND loras is not empty
+    action: >
+      Each LoraLoader node must receive MODEL input and produce MODEL output,
+      AND receive CLIP input and produce CLIP output.
+      Connecting only MODEL (skipping CLIP) causes text encoding errors.
+      每个LoraLoader节点必须同时串联MODEL和CLIP，跳过CLIP会导致文本编码错误。
+
+  R08:
+    id: R08
+    severity: CRITICAL
+    name: "Terminal node required / 必须有终点节点"
+    condition: target_platform == "comfyui"
+    action: >
+      Workflow must end with SaveImage or PreviewImage.
+      工作流必须以SaveImage或PreviewImage作为终点节点。
+
+  R09:
+    id: R09
+    severity: CRITICAL
+    name: "Unique node IDs / 节点ID不重复"
+    condition: target_platform == "comfyui"
+    action: >
+      All node IDs must be unique integers. Assign sequentially from 1.
+      所有节点ID必须是唯一整数，从1开始顺序分配。
+
+  R10:
+    id: R10
+    severity: CRITICAL
+    name: "Type-safe connections / 类型安全连线"
+    condition: target_platform == "comfyui"
+    action: >
+      Connections must match types: MODEL↔MODEL, CLIP↔CLIP, LATENT↔LATENT,
+      IMAGE↔IMAGE, MASK↔MASK, CONDITIONING↔CONDITIONING, VAE↔VAE.
+      Mismatched types cause ComfyUI load errors.
+      连线类型必须匹配，类型不匹配会导致ComfyUI加载报错。
+
+  R11:
+    id: R11
+    severity: CRITICAL
+    name: "ControlNet chaining / ControlNet链式串联"
+    condition: target_platform == "comfyui" AND controlnets.length > 1
+    action: >
+      Multiple ControlNets must chain: each ControlNetApplyAdvanced receives
+      the previous one's conditioning output, not the same base conditioning.
+      多个ControlNet必须链式串联，每个接收上一个的conditioning输出，而非同一个基础conditioning。
+
+  R12:
+    id: R12
+    severity: CRITICAL
+    name: "Video workflow needs VHS_VideoCombine / 视频工作流需要VHS合并节点"
+    condition: target_platform == "comfyui" AND pipeline_type IN [img2vid, txt2vid]
+    action: >
+      Video workflows must include VHS_VideoCombine (from VideoHelperSuite) or
+      SaveAnimatedWEBP as the terminal node.
+      视频工作流必须包含VHS_VideoCombine（需VideoHelperSuite）或SaveAnimatedWEBP作为终点。
+
+  # ── FLUX-SPECIFIC COMFYUI RULES / Flux专属ComfyUI规则 ────────────
+
+  R13:
+    id: R13
+    severity: CRITICAL
+    name: "Flux requires dual CLIP loader / Flux需要双CLIP加载"
+    condition: target_platform == "comfyui" AND model_family == "flux"
+    action: >
+      Flux requires TWO separate CLIP models loaded via CLIPLoader:
+      1) clip_l (text encoder) 2) t5xxl (T5 text encoder)
+      Then use DualCLIPLoader or two CLIPLoader nodes merged.
+      Flux需要通过CLIPLoader加载两个CLIP模型：clip_l和t5xxl。
+
+  R14:
+    id: R14
+    severity: CRITICAL
+    name: "Flux GGUF needs UnetLoaderGGUF / Flux GGUF需要专用加载器"
+    condition: target_platform == "comfyui" AND model_family == "flux"
+                AND model_name contains ".gguf"
+    action: >
+      Use UnetLoaderGGUF (from ComfyUI-GGUF custom node) instead of UNETLoader
+      for .gguf quantized Flux models. Also use CLIPLoaderGGUF for GGUF CLIP files.
+      .gguf量化Flux模型需要使用UnetLoaderGGUF节点，需安装ComfyUI-GGUF插件。
+
+  R15:
+    id: R15
+    severity: CRITICAL
+    name: "Flux KSampler cfg must be 1 / Flux采样器cfg必须为1"
+    condition: target_platform == "comfyui" AND model_family == "flux"
+    action: >
+      In Flux ComfyUI workflows, KSampler cfg must be set to 1.0.
+      Guidance is controlled by FluxGuidance node (default: 3.5 for dev, 1.0 for schnell).
+      Flux工作流中KSampler的cfg必须为1.0，引导强度由FluxGuidance节点控制。
+
+  # ── A1111 SPECIFIC RULES / A1111专属规则 ─────────────────────────
+
+  R16:
+    id: R16
+    severity: ADVISORY
+    name: "A1111 LoRA syntax in prompt / A1111 LoRA语法嵌入提示词"
+    condition: target_platform == "a1111" AND loras is not empty
+    action: >
+      A1111 uses <lora:modelname:weight> syntax embedded in the positive prompt,
+      NOT separate LoRA parameters. Append to prompt automatically.
+      A1111使用<lora:模型名:权重>语法嵌入正向提示词中，而非独立参数。
+
+  R17:
+    id: R17
+    severity: ADVISORY
+    name: "A1111 size must be divisible by 8 / A1111尺寸须被8整除"
+    condition: target_platform == "a1111" AND (width % 8 != 0 OR height % 8 != 0)
+    action: >
+      Round width and height to nearest multiple of 8.
+      宽高必须是8的倍数，自动取整。
+
+  # ── SIZE COMPATIBILITY / 尺寸兼容性 ──────────────────────────────
+
+  R18:
+    id: R18
+    severity: ADVISORY
+    name: "SD1.5 optimal size / SD1.5最优尺寸"
+    condition: model_family == "sd15" AND (width > 768 OR height > 768)
+    action: >
+      Warn: "SD1.5 is trained on 512px. Sizes above 768px may cause doubled
+      subjects or distorted anatomy. Consider hires_fix instead.
+      / SD1.5在512px上训练，超过768px可能出现重复主体或形变，建议使用hires_fix。"
+
+  R19:
+    id: R19
+    severity: ADVISORY
+    name: "SDXL minimum size / SDXL最小尺寸"
+    condition: model_family == "sdxl" AND (width < 768 OR height < 768)
+    action: >
+      Warn: "SDXL performs poorly below 768px. Recommended minimum: 1024×1024.
+      / SDXL在768px以下效果较差，建议最小尺寸1024×1024。"
+
+  # ── DEPENDENCY COMPLETENESS / 依赖完整性 ─────────────────────────
+
+  R20:
+    id: R20
+    severity: CRITICAL
+    name: "All referenced models must appear in dependencies.md"
+    action: >
+      Every model filename referenced in the workflow (checkpoint, VAE, LoRA,
+      ControlNet, upscale, face restore, IPAdapter, CLIP, UNET) must have a
+      corresponding entry in dependencies.md with a download source.
+      工作流中引用的所有模型文件必须在dependencies.md中列出并附下载来源。
