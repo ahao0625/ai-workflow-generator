@@ -279,6 +279,18 @@ A: 能。支持 AnimateDiff（SD1.5/SDXL 动画化）、SVD（图生视频）、
 
 ---
 
+## ☕ 支持一杯咖啡
+
+如果你觉得这个项目对你有帮助，欢迎打赏支持！
+
+| 微信 | 支付宝 |
+|:----:|:------:|
+| <img src="assets/wechat-qr.png" width="200" alt="微信收款码"/> | <img src="assets/alipay-qr.png" width="200" alt="支付宝收款码"/> |
+
+每一份支持都是我继续维护和更新的动力 🌟
+
+---
+
 ## License
 
 MIT License — 免费商用，欢迎 fork 和 PR。
