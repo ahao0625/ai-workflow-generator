@@ -7,6 +7,19 @@
 
 ---
 
+## 📥 下载方式
+
+> **方式一（推荐，无需 Git）：** 点击 [📦 下载压缩包](https://github.com/ahao0625/ai-workflow-generator/releases/download/v1.0.0/ai-workflow-generator-v1.0.0.zip)，解压即用。
+
+> **方式二（用 Git）：**
+> ```bash
+> git clone https://github.com/ahao0625/ai-workflow-generator.git
+> ```
+
+> **方式三（直接用网页）：** 打开 [GitHub 仓库](https://github.com/ahao0625/ai-workflow-generator)，点击右上角 **Code → Download ZIP**。
+
+---
+
 ## 一句话介绍
 
 这是一个"给 AI 读的说明书"（SKILL.md）。不管你用的是 Claude、ChatGPT、Kimi 还是 DeepSeek，只要把这份说明书扔给它，它就能根据你的需求，生成 ComfyUI 节点图、A1111 参数、Diffusers 脚本、API 请求或 Midjourney 提示词。
