@@ -14,74 +14,74 @@ controlnet_aux:
 
   DWPreprocessor:
     desc: "DWPose body keypoints (best pose detection) / DWPose人体关键点（最佳姿势检测）"
-    inputs: [image: IMAGE, detect_hand: ENUM, detect_body: ENUM, detect_face: ENUM]
+    inputs: "image: IMAGE, detect_hand: ENUM, detect_body: ENUM, detect_face: ENUM"
     outputs: [IMAGE]
     use_with: "control_v11p_sd15_openpose / control-lora-openposeXL2"
 
   OpenposePreprocessor:
     desc: "OpenPose body + face / OpenPose身体+面部"
-    inputs: [image: IMAGE, detect_hand: ENUM, detect_body: ENUM, detect_face: ENUM]
+    inputs: "image: IMAGE, detect_hand: ENUM, detect_body: ENUM, detect_face: ENUM"
     outputs: [IMAGE]
 
   CannyEdgePreprocessor:
     desc: "Canny edge detection / Canny边缘检测"
-    inputs: [image: IMAGE, low_threshold: INT [default 100], high_threshold: INT [default 200]]
+    inputs: "image: IMAGE, low_threshold: INT [default 100, high_threshold: INT [default 200]]"
     outputs: [IMAGE]
     use_with: "control_v11p_sd15_canny / controlnet-canny-sdxl"
 
   HEDPreprocessor:
     desc: "HED soft edge / HED软边缘"
-    inputs: [image: IMAGE, safe: ENUM]
+    inputs: "image: IMAGE, safe: ENUM"
     outputs: [IMAGE]
 
   LineArtPreprocessor:
     desc: "Realistic line art / 写实线稿提取"
-    inputs: [image: IMAGE, coarse: ENUM]
+    inputs: "image: IMAGE, coarse: ENUM"
     outputs: [IMAGE]
 
   AnimeLineArtPreprocessor:
     desc: "Anime line art / 动漫线稿提取"
-    inputs: [image: IMAGE]
+    inputs: "image: IMAGE"
     outputs: [IMAGE]
 
   MiDaS_DepthMapPreprocessor:
     desc: "MiDaS depth estimation / MiDaS深度估计"
-    inputs: [image: IMAGE, a: FLOAT, bg_threshold: FLOAT]
+    inputs: "image: IMAGE, a: FLOAT, bg_threshold: FLOAT"
     outputs: [IMAGE]
 
   ZoeDepthMapPreprocessor:
     desc: "Zoe depth estimation (more accurate) / Zoe深度估计（更精确）"
-    inputs: [image: IMAGE]
+    inputs: "image: IMAGE"
     outputs: [IMAGE]
 
   DepthAnythingPreprocessor:
     desc: "Depth Anything v2 (state of art depth) / Depth Anything v2深度估计"
-    inputs: [image: IMAGE, resolution: INT]
+    inputs: "image: IMAGE, resolution: INT"
     outputs: [IMAGE]
 
   NormalMapPreprocessor:
     desc: "BAE normal map / BAE法线贴图"
-    inputs: [image: IMAGE]
+    inputs: "image: IMAGE"
     outputs: [IMAGE]
 
   TilePreprocessor:
     desc: "Tile preprocessor (for tiled upscale) / 分块预处理（分块超分用）"
-    inputs: [image: IMAGE, pyrUp_iters: INT [default 3]]
+    inputs: "image: IMAGE, pyrUp_iters: INT [default 3]"
     outputs: [IMAGE]
 
   Scribble_XDoG_Preprocessor:
     desc: "XDoG scribble-like lines / XDoG涂鸦风格线条"
-    inputs: [image: IMAGE]
+    inputs: "image: IMAGE"
     outputs: [IMAGE]
 
   SAMPreprocessor:
     desc: "SAM segmentation / SAM分割预处理"
-    inputs: [image: IMAGE]
+    inputs: "image: IMAGE"
     outputs: [IMAGE]
 
   MediaPipe_FaceMeshPreprocessor:
     desc: "Face mesh keypoints / 面部网格关键点"
-    inputs: [image: IMAGE, max_faces: INT, min_confidence: FLOAT]
+    inputs: "image: IMAGE, max_faces: INT, min_confidence: FLOAT"
     outputs: [IMAGE]
 
 # ══════════════════════════════════════════════════════════════
@@ -102,7 +102,7 @@ ipadapter_plus:
 
   IPAdapterUnifiedLoader:
     desc: "Load IPAdapter + CLIP Vision together / 一体式加载IPAdapter和CLIP Vision"
-    inputs: [model: MODEL, preset: ENUM]
+    inputs: "model: MODEL, preset: ENUM"
     outputs: [MODEL, ipadapter: IPADAPTER]
     note: "Preset auto-selects right model / preset自动选择对应模型"
 
@@ -132,7 +132,7 @@ ipadapter_plus:
 
   IPAdapterCombineEmbeds:
     desc: "Combine multiple reference images / 合并多个参考图像嵌入"
-    inputs: [embed1: EMBEDS, ..., method: ENUM]
+    inputs: "embed1: EMBEDS, ..., method: ENUM"
     outputs: [EMBEDS]
 
 # ══════════════════════════════════════════════════════════════
@@ -149,11 +149,11 @@ instantid:
     models_path: "models/instantid/"
 
   InstantIDModelLoader:
-    inputs: [instantid_file: STRING]
+    inputs: "instantid_file: STRING"
     outputs: [instantid: INSTANTID]
 
   InstantIDFaceAnalysis:
-    inputs: [provider: ENUM [CPU, CUDA, ROCM]]
+    inputs: "provider: ENUM [CPU, CUDA, ROCM]"
     outputs: [FACEANALYSIS]
 
   ApplyInstantID:
@@ -198,12 +198,12 @@ impact_pack:
 
   SAMLoader:
     desc: "Load SAM segmentation model / 加载SAM分割模型"
-    inputs: [model_name: STRING, device_mode: ENUM]
+    inputs: "model_name: STRING, device_mode: ENUM"
     outputs: [SAM_MODEL]
 
   GroundingDinoModelLoader:
     desc: "Load GroundingDINO detection model / 加载GroundingDINO检测模型"
-    inputs: [model_name: STRING]
+    inputs: "model_name: STRING"
     outputs: [GROUNDING_DINO_MODEL]
 
   BboxDetectorSEGS:
@@ -213,7 +213,7 @@ impact_pack:
 
   UltralyticsDetectorProvider:
     desc: "YOLOv8-based face/person detector / 基于YOLOv8的人脸/人体检测"
-    inputs: [model_name: STRING]
+    inputs: "model_name: STRING"
     outputs: [BBOX_DETECTOR, SEGM_DETECTOR]
 
 # ══════════════════════════════════════════════════════════════
@@ -239,7 +239,7 @@ animatediff_evolved:
 
   ADE_AnimateDiffLoRALoader:
     desc: "Load motion LoRA / 加载运动LoRA"
-    inputs: [lora_name: STRING, strength: FLOAT]
+    inputs: "lora_name: STRING, strength: FLOAT"
     outputs: [MOTION_LORA]
 
 # ══════════════════════════════════════════════════════════════
@@ -266,11 +266,11 @@ video_helper_suite:
 
   VHS_LoadVideo:
     desc: "Load video file / 加载视频文件"
-    inputs: [video: STRING, force_rate: INT, force_size: ENUM, frame_load_cap: INT]
+    inputs: "video: STRING, force_rate: INT, force_size: ENUM, frame_load_cap: INT"
     outputs: [IMAGE, VHS_VIDEOINFO, audio: AUDIO]
 
   VHS_DuplicateImages:
-    inputs: [images: IMAGE, multiply_by: INT]
+    inputs: "images: IMAGE, multiply_by: INT"
     outputs: [IMAGE]
 
 # ══════════════════════════════════════════════════════════════
@@ -284,13 +284,13 @@ comfyui_gguf:
 
   UnetLoaderGGUF:
     desc: "Load GGUF quantized UNET / 加载GGUF量化UNET"
-    inputs: [unet_name: STRING]
+    inputs: "unet_name: STRING"
     outputs: [MODEL]
     use_for: "Flux/SD3 GGUF files / Flux/SD3的.gguf文件"
 
   CLIPLoaderGGUF:
     desc: "Load GGUF quantized CLIP / 加载GGUF量化CLIP"
-    inputs: [clip_name: STRING, type: ENUM]
+    inputs: "clip_name: STRING, type: ENUM"
     outputs: [CLIP]
 
 # ══════════════════════════════════════════════════════════════
@@ -304,11 +304,11 @@ layerdiffuse:
 
   LayeredDiffusionApply:
     desc: "Generate transparent background images / 生成透明背景图像"
-    inputs: [model: MODEL, config: ENUM, weight: FLOAT]
+    inputs: "model: MODEL, config: ENUM, weight: FLOAT"
     outputs: [MODEL]
 
   LayeredDiffusionDecode:
-    inputs: [samples: LATENT, images: IMAGE, sd_version: ENUM, sub_batch_size: INT]
+    inputs: "samples: LATENT, images: IMAGE, sd_version: ENUM, sub_batch_size: INT"
     outputs: [image: IMAGE, mask: MASK]
 
 # ══════════════════════════════════════════════════════════════

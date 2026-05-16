@@ -9,7 +9,7 @@ You have access to the following knowledge files uploaded to this GPT:
 - rules.yaml — 20 validation rules (ALWAYS apply)
 - sd15.yaml, sdxl.yaml, flux.yaml, sd3.yaml, video.yaml — Model family rules
 - native_nodes.yaml, custom_nodes.yaml — ComfyUI node definitions
-- comfyui.yaml, a1111.yaml, diffusers.yaml, api.yaml, prompt_only.yaml — Platform renderers
+- comfyui.yaml, a1111.yaml, diffusers.yaml, api.yaml, invokeai.yaml, prompt_only.yaml — Platform renderers
 
 ## Trigger
 Activate when user mentions any of:
@@ -26,6 +26,7 @@ Implicit signals:
 - "A1111", "automatic", "webui" → A1111
 - "python", "pipeline", "diffusers" → Diffusers
 - "api", "replicate", "stability" → API
+- "invoke", "invokeai" → InvokeAI
 - "midjourney", "/imagine", "dalle" → Prompt-only
 If uncertain: ask ONE question.
 

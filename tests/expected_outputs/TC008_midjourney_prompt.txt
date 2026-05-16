@@ -1,0 +1,39 @@
+{
+  "meta": {
+    "test_id": "TC008",
+    "description": "SDXL workflow → Midjourney /imagine prompt (cross-platform conversion) expected output summary",
+    "format": "prompt.txt"
+  },
+  "expected_prompt_summary": {
+    "target_platform": "midjourney",
+    "conversion_type": "cross-platform (SDXL → Midjourney)",
+    "prompt_contains": [
+      "serene mountain lake at sunrise"
+    ],
+    "prompt_does_not_contain": [
+      "1024x1024",
+      "dpmpp_2m",
+      "karras",
+      "cfg",
+      "steps",
+      "seed"
+    ],
+    "has_aspect_ratio": true,
+    "ar_value": "1:1",
+    "quality_indicators": [
+      "Reads naturally like a human-written artistic prompt",
+      "No quality tag spam (no '8k, masterpiece, best quality' overload)",
+      "Descriptive and evocative language"
+    ],
+    "critical_enforcements": [
+      "NO technical SD parameters in the Midjourney prompt",
+      "Size 1024x1024 maps to --ar 1:1",
+      "Subject content preserved: mountain lake, sunrise, serene",
+      "Prompt is optimized for Midjourney's aesthetic engine (descriptive style)"
+    ]
+  },
+  "expected_dependencies": {
+    "service": "Midjourney (via Discord or website)",
+    "no_models_required": true
+  }
+}

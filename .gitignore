@@ -1,38 +1,23 @@
-# ── OS / 操作系统 ──────────────────────────────────────────────
+# OS files
 .DS_Store
 Thumbs.db
-ehthumbs.db
-Desktop.ini
 
-# ── Editor / 编辑器 ────────────────────────────────────────────
+# Promotional / personal materials (not part of skill package)
+PROMOTION.md
+assets/
+assets/**
+
+# IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
-.project
-.settings/
 
-# ── Python / Python ───────────────────────────────────────────
+# Python cache
 __pycache__/
-*.py[cod]
-*.egg-info/
-dist/
-build/
-.eggs/
-*.egg
+*.pyc
 
-# ── Node / Node.js ───────────────────────────────────────────
-node_modules/
-package-lock.json
-yarn.lock
+# Knowledge index cache
+knowledge/.cache/
 
-# ── Test Outputs / 测试输出（本地验证产物）─────────────────────
-test_outputs/
-*.log
-
-# ── Secrets / 密钥 ────────────────────────────────────────────
-.env
-.env.local
-*.pem
-*.key
+# Temporary
+*.tmp
+*.bak

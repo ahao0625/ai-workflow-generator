@@ -52,6 +52,67 @@ knowledge/platforms/a1111.yaml      ← A1111 / Forge parameter renderer
 knowledge/platforms/diffusers.yaml  ← HuggingFace Diffusers Python renderer
 knowledge/platforms/api.yaml        ← REST API body renderer (Replicate/Stability/etc)
 knowledge/platforms/prompt_only.yaml ← Midjourney / DALL·E / Ideogram prompt renderer
+knowledge/platforms/invokeai.yaml   ← InvokeAI Node Editor JSON renderer
+```
+
+---
+
+## Programmatic IR Layer / 可编程中间表示层
+
+For developers integrating this skill into Agent / MCP / Tool-calling systems, use the programmatic IR in `core/ir/`:
+
+```python
+from core import WorkflowIR, ModelFamily, PipelineType, TargetPlatform, SamplingParams, LoraRef
+
+ir = WorkflowIR(
+    model_family=ModelFamily.SDXL,
+    pipeline_type=PipelineType.TXT2IMG,
+    target_platform=TargetPlatform.COMFYUI,
+    prompt="a beautiful landscape, masterpiece",
+    negative_prompt="worst quality",
+    sampling=SamplingParams.defaults_for(ModelFamily.SDXL),
+    loras=[
+        LoraRef(name="add_detail", weight_model=0.8),
+        LoraRef(name="epiNoiseoffset", weight_model=0.6, weight_clip=0.6),
+    ],
+)
+
+ir.validate()                # → list of validation errors
+ir.supports_negative_prompt() # → model-family-aware check
+ir.get_unique_dependencies()  # → all referenced model file names
+```
+
+**Key classes / 核心类:**
+
+| Module | Purpose |
+|--------|---------|
+| `core/ir/parameter.py` | All enums (ModelFamily, PipelineType, TargetPlatform…) + dataclasses (SamplingParams, LoraRef, ControlNetRef, IPAdapterRef, AnimateDiffParams…) |
+| `core/ir/node.py` | IRNode, NodeConnection, NodePort, STANDARD_NODE_PORTS — platform-agnostic node graph types |
+| `core/ir/workflow.py` | `WorkflowIR` — the single source of truth for every workflow. `validate()`, `to_dict()`, `uses_dual_clip()`, `needs_flux_guidance()` … |
+| `core/ir/translator.py` | `PlatformTranslator` ABC with `translate()`, `parse()`, `roundtrip_check()` — all adapters implement this |
+
+**Adapter registry / 适配器注册:**
+
+```python
+from adapters.base_adapter import BaseAdapter, AdapterRegistry
+
+# Find all adapters that support a given model+pipe combo
+adapters = AdapterRegistry.find_adapter(ModelFamily.FLUX, PipelineType.TXT2IMG)
+
+# Translate IR directly to a target platform
+output = AdapterRegistry.translate(ir, TargetPlatform.COMFYUI)
+```
+
+**Knowledge index / 知识索引:**
+
+```bash
+python3 knowledge/build_index.py
+# → knowledge/.cache/index.json (auto-generated, gitignored)
+```
+
+```python
+from knowledge.build_index import query_index
+query_index(model="flux", platform="comfyui")
 ```
 
 ---
@@ -70,7 +131,7 @@ User mentions a platform name → use it directly.
 | "api", "replicate", "stability ai" | API |
 | "midjourney", "/imagine", "--ar" | Prompt-only |
 | "forge" | A1111 (Forge variant) |
-| "invoke", "invokeai" | InvokeAI (→ use ComfyUI JSON as base, note differences) |
+| "invoke", "invokeai" | InvokeAI (→ load knowledge/platforms/invokeai.yaml) |
 
 ### Unknown / 未知
 If platform cannot be inferred, ask ONE question:
@@ -131,6 +192,7 @@ Layout coordinates: `x` increases left→right in steps of `300`, `y` groups by 
 
 **① Workflow file** (format depends on platform):
 - ComfyUI → `workflow.json` (node graph) + `workflow_api.json` (API format)
+- InvokeAI → `invokeai_workflow.json` (Node Editor format)
 - A1111 → `params.json`
 - Diffusers → `pipeline.py`
 - API → `request.json` + `example.sh`
@@ -194,3 +256,33 @@ Before outputting, verify:
 - [ ] SaveImage or PreviewImage present as terminal node (ComfyUI)
 - [ ] dependencies.md includes ALL models referenced in workflow
 - [ ] Usage notes explain how to load the file on the target platform
+
+---
+
+## Automated Validation / 自动化验证
+
+Run the test validator to check all test cases against their expected outputs:
+
+```bash
+python3 tests/validators/test_validation.py
+```
+
+The validator runs semantic checks (R01 Flux no negative, R06 VAEEncodeForInpaint, R15 Flux cfg=1)
+and platform-specific validators (ComfyUI / A1111 / Diffusers / InvokeAI).
+
+**Test coverage / 测试覆盖:**
+| TC | Scenario / 场景 | Platform |
+|----|----------------|----------|
+| TC001 | SDXL + 2 LoRAs | ComfyUI |
+| TC002 | Flux.1-dev + ControlNet | ComfyUI |
+| TC003 | SD1.5 inpaint (R06) | ComfyUI |
+| TC004 | SD1.5 + LoRA syntax | A1111 |
+| TC005 | Flux schnell (R03) | A1111 |
+| TC006 | SDXL pipeline.py | Diffusers |
+| TC007 | SD3.5 Replicate API | API |
+| TC008 | SDXL → Midjourney | Prompt-only |
+| TC009 | AnimateDiff video | ComfyUI |
+| TC010 | Stability AI API | API |
+| TC011 | Multi-ControlNet chain | ComfyUI |
+| TC012 | SDXL base + refiner | Diffusers |
+| TC013 | SDXL txt2img | InvokeAI |

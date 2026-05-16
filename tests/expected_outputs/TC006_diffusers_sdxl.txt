@@ -1,0 +1,33 @@
+{
+  "meta": {
+    "test_id": "TC006",
+    "description": "SDXL txt2img → Diffusers pipeline.py expected output summary",
+    "format": "pipeline.py"
+  },
+  "expected_python_summary": {
+    "target_platform": "diffusers",
+    "model_family": "sdxl",
+    "pipeline_type": "txt2img",
+    "key_imports": [
+      "StableDiffusionXLPipeline",
+      "torch"
+    ],
+    "key_code_elements": [
+      "StableDiffusionXLPipeline.from_pretrained() loading an SDXL checkpoint",
+      "device configuration (CUDA/MPS/CPU)",
+      "PNG metadata embedding (save_metadata enabled)",
+      "Output file save with .png extension",
+      "prompt used: 'a red sports car on a mountain road'",
+      "SDXL default params: 1024x1024, 25 steps, cfg 7.0, dpmpp_2m karras"
+    ],
+    "critical_enforcements": [
+      "Uses StableDiffusionXLPipeline (not standard SD pipeline)",
+      "Has proper error handling for missing models",
+      "Includes requirements.txt or dependency notes"
+    ]
+  },
+  "expected_dependencies": {
+    "checkpoints": ["sd_xl_base_1.0.safetensors or JuggernautXL"],
+    "pip_requirements": ["diffusers", "torch", "pillow", "transformers", "accelerate"]
+  }
+}

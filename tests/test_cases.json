@@ -206,5 +206,27 @@
       "has_denoising_start_param": true,
       "output_is_python": true
     }
+  },
+  {
+    "id": "TC013",
+    "name": "SDXL txt2img → InvokeAI",
+    "description": "InvokeAI node graph format with UUID-based IDs and snake_case node types",
+    "input": "InvokeAI workflow for SDXL txt2img. Prompt: 'a wizard's tower in a fantasy forest at twilight'",
+    "expected": {
+      "target_platform": "invokeai",
+      "model_family": "sdxl",
+      "pipeline_type": "txt2img",
+      "has_main_model_loader": true,
+      "has_sdxl_compel_prompt": true,
+      "has_noise": true,
+      "has_denoise_latents": true,
+      "has_l2i": true,
+      "has_save_image": true,
+      "all_node_ids_are_uuid_format": true,
+      "edges_use_source_destination_format": true,
+      "valid_json": true,
+      "no_comfyui_style_integer_ids": true,
+      "no_comfyui_style_link_numbers": true
+    }
   }
 ]

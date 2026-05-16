@@ -1,0 +1,36 @@
+{
+  "meta": {
+    "test_id": "TC005",
+    "description": "Flux schnell → A1111 Forge params expected output summary",
+    "format": "params.json"
+  },
+  "expected_params_summary": {
+    "target_platform": "a1111",
+    "model_family": "flux",
+    "pipeline_type": "txt2img",
+    "key_fields": [
+      "prompt",
+      "sampler_name",
+      "steps",
+      "cfg_scale",
+      "seed",
+      "width",
+      "height"
+    ],
+    "critical_enforcements": [
+      "R01: No negative_prompt field (Flux does not support it)",
+      "R03: Steps must be ≤ 8 (schnell is distilled for 1-4 steps)",
+      "Steps = 4 exactly (user specified)",
+      "CFG scale should be 1.0",
+      "Sampler should be euler with simple scheduler",
+      "Width/height should be 1024x1024 (Flux default)",
+      "Size divisible by 8 (R17)"
+    ],
+    "prompt_contains": ["a futuristic robot"]
+  },
+  "expected_dependencies": {
+    "checkpoints": ["flux1-schnell.safetensors"],
+    "loras": [],
+    "vae": ["ae.safetensors (bundled or separate)"]
+  }
+}

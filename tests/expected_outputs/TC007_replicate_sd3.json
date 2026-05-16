@@ -1,0 +1,35 @@
+{
+  "meta": {
+    "test_id": "TC007",
+    "description": "SD3.5 → Replicate API expected output summary",
+    "format": "request.json + example.sh"
+  },
+  "expected_api_summary": {
+    "target_platform": "replicate",
+    "model_family": "sd3",
+    "pipeline_type": "txt2img",
+    "output_files": ["request.json", "example.sh"],
+    "request_json_contains": {
+      "model_owner_path": "stability-ai/stable-diffusion-3.5-large or similar SD3.5 model path",
+      "prompt": "an astronaut riding a horse on Mars",
+      "width": 1024,
+      "height": 1024,
+      "num_outputs": 1,
+      "seed": null
+    },
+    "example_sh_contains": [
+      "curl command to Replicate API endpoint",
+      "Authorization: Bearer $REPLICATE_API_TOKEN header",
+      "Content-Type: application/json"
+    ],
+    "critical_enforcements": [
+      "Has auth header instruction in example.sh",
+      "Valid JSON structure for Replicate prediction request",
+      "SD3 default params: 1024x1024, cfg 4.5"
+    ]
+  },
+  "expected_dependencies": {
+    "api_service": "Replicate (replicate.com)",
+    "auth_required": "REPLICATE_API_TOKEN environment variable"
+  }
+}

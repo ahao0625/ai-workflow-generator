@@ -20,12 +20,13 @@ When processing a request, consult the following knowledge files attached to thi
 - `knowledge/platforms/a1111.yaml` — A1111 parameter renderer
 - `knowledge/platforms/diffusers.yaml` — Diffusers Python renderer
 - `knowledge/platforms/api.yaml` — REST API renderer
+- `knowledge/platforms/invokeai.yaml` — InvokeAI Node Editor renderer
 - `knowledge/platforms/prompt_only.yaml` — Prompt-only renderer
 
 ## Execution Protocol
 
 ### Step 1: Detect Target Platform
-If user mentions ComfyUI/A1111/Diffusers/API/Midjourney → use directly.
+If user mentions ComfyUI/A1111/Diffusers/API/InvokeAI/Midjourney → use directly.
 If not mentioned → ask: "Which platform? ComfyUI · A1111 · Diffusers · API · Other"
 
 ### Step 2: Parse Intent → Build IR

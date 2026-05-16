@@ -1,0 +1,104 @@
+{
+  "1": {
+    "inputs": {
+      "ckpt_name": "sd_xl_base_1.0.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple"
+  },
+  "2": {
+    "inputs": {
+      "clip": ["1", 1],
+      "text_g": "photo of a person, highly detailed, 8k, professional lighting",
+      "text_l": "photo of a person, highly detailed, 8k, professional lighting",
+      "width": 1024,
+      "height": 1024,
+      "crop_w": 0,
+      "crop_h": 0,
+      "target_width": 1024,
+      "target_height": 1024
+    },
+    "class_type": "CLIPTextEncodeSDXL"
+  },
+  "3": {
+    "inputs": {
+      "clip": ["1", 1],
+      "text_g": "worst quality, low quality, blurry, distorted",
+      "text_l": "worst quality, low quality, blurry, distorted",
+      "width": 1024,
+      "height": 1024,
+      "crop_w": 0,
+      "crop_h": 0,
+      "target_width": 1024,
+      "target_height": 1024
+    },
+    "class_type": "CLIPTextEncodeSDXL"
+  },
+  "4": {
+    "inputs": {
+      "image": "reference_face.png"
+    },
+    "class_type": "LoadImage"
+  },
+  "5": {
+    "inputs": {
+      "image": "input_image.png"
+    },
+    "class_type": "LoadImage"
+  },
+  "6": {
+    "inputs": {
+      "model": ["1", 0],
+      "preset": "SDXL FACEID"
+    },
+    "class_type": "IPAdapterUnifiedLoader"
+  },
+  "7": {
+    "inputs": {
+      "model": ["6", 0],
+      "ipadapter": ["6", 1],
+      "image": ["4", 0],
+      "weight": 1.0,
+      "weight_type": "linear",
+      "start_at": 0.0,
+      "end_at": 1.0,
+      "combine_embeds": "concat"
+    },
+    "class_type": "IPAdapterAdvanced"
+  },
+  "8": {
+    "inputs": {
+      "pixels": ["5", 0],
+      "vae": ["1", 2]
+    },
+    "class_type": "VAEEncode"
+  },
+  "9": {
+    "inputs": {
+      "seed": 123456789,
+      "steps": 25,
+      "cfg": 7.0,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras",
+      "denoise": 0.75,
+      "model": ["7", 0],
+      "positive": ["2", 0],
+      "negative": ["3", 0],
+      "latent_image": ["8", 0]
+    },
+    "class_type": "KSampler"
+  },
+  "10": {
+    "inputs": {
+      "samples": ["9", 0],
+      "vae": ["1", 2]
+    },
+    "class_type": "VAEDecode"
+  },
+  "11": {
+    "inputs": {
+      "filename_prefix": "SDXL_faceid_output",
+      "images": ["10", 0]
+    },
+    "class_type": "SaveImage"
+  }
+}

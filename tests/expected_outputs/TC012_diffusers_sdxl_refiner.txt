@@ -1,0 +1,42 @@
+{
+  "meta": {
+    "test_id": "TC012",
+    "description": "SDXL base + refiner two-stage → Diffusers pipeline expected output summary",
+    "format": "pipeline.py"
+  },
+  "expected_python_summary": {
+    "target_platform": "diffusers",
+    "model_family": "sdxl",
+    "pipeline_type": "txt2img",
+    "requires_refiner": true,
+    "key_imports": [
+      "StableDiffusionXLPipeline",
+      "StableDiffusionXLImg2ImgPipeline",
+      "torch"
+    ],
+    "key_code_elements": [
+      "StableDiffusionXLPipeline.from_pretrained(base_model_path) for pass 1",
+      "StableDiffusionXLImg2ImgPipeline.from_pretrained(refiner_model_path) for pass 2",
+      "denoising_end parameter on base pipeline (e.g. 0.8 → base does 80%, refiner does 20%)",
+      "denoising_start parameter on refiner pipeline",
+      "Base pass outputs latent (output_type='latent')",
+      "Refiner pass takes base latent as input_image",
+      "PNG metadata embedding with full parameter trace",
+      "prompt: 'hyperrealistic portrait of an elderly man'"
+    ],
+    "critical_enforcements": [
+      "Base pipeline uses StableDiffusionXLPipeline (not standard SD)",
+      "Refiner pipeline uses StableDiffusionXLImg2ImgPipeline (img2img mode)",
+      "denoising_end ≈ 0.8 on base, denoising_start ≈ 0.8 on refiner",
+      "Base outputs latent, refiner outputs image",
+      "Proper CUDA/MPS memory management (release base model before loading refiner if GPU-limited)"
+    ]
+  },
+  "expected_dependencies": {
+    "checkpoints": [
+      "sd_xl_base_1.0.safetensors",
+      "sd_xl_refiner_1.0.safetensors"
+    ],
+    "pip_requirements": ["diffusers", "torch", "pillow", "transformers", "accelerate", "safetensors", "invisible-watermark"]
+  }
+}

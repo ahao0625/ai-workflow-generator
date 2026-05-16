@@ -1,0 +1,43 @@
+{
+  "meta": {
+    "test_id": "TC009",
+    "description": "AnimateDiff txt2vid → ComfyUI expected output summary",
+    "format": "workflow.json"
+  },
+  "expected_workflow_summary": {
+    "total_nodes": 10,
+    "node_classes": [
+      "CheckpointLoaderSimple",
+      "CLIPTextEncode",
+      "CLIPTextEncode",
+      "LoadAnimateDiffModel",
+      "AnimateDiffLoaderWithContext",
+      "EmptyLatentImage",
+      "KSampler",
+      "VAEDecode",
+      "VHS_VideoCombine",
+      "SaveImage"
+    ],
+    "critical_enforcements": [
+      "R05: pipeline_type is txt2vid (video model requires video pipeline)",
+      "R12: VHS_VideoCombine (from VideoHelperSuite) must be the terminal output node",
+      "AnimateDiffLoaderWithContext sits between CheckpointLoaderSimple.MODEL and KSampler.model",
+      "LoadAnimateDiffModel.MOTION_MODULE → AnimateDiffLoaderWithContext.motion_model",
+      "Motion module loaded: mm_sd_v15_v2.safetensors",
+      "Base model is SD1.5 (CheckpointLoaderSimple), not SDXL/Flux",
+      "Prompts use CLIPTextEncode (SD1.5 style), not SDXL variant"
+    ],
+    "required_custom_nodes": [
+      "ComfyUI-AnimateDiff-Evolved",
+      "ComfyUI-VideoHelperSuite"
+    ]
+  },
+  "expected_dependencies": {
+    "checkpoints": ["dreamshaper_8.safetensors or similar SD1.5 model"],
+    "motion_modules": ["mm_sd_v15_v2.safetensors"],
+    "custom_nodes": [
+      "Kosinkadink/ComfyUI-AnimateDiff-Evolved",
+      "Kosinkadink/ComfyUI-VideoHelperSuite"
+    ]
+  }
+}

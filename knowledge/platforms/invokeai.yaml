@@ -1,0 +1,178 @@
+# InvokeAI Workflow Renderer / InvokeAI工作流渲染器
+# Maps IR → InvokeAI node graph JSON (Nodes Editor format)
+# 将 IR 映射为 InvokeAI 节点编辑器 JSON 格式
+# Tested against InvokeAI v4.x / 适用于 InvokeAI v4.x
+
+platform: invokeai
+output_formats: [invokeai_workflow.json, dependencies.md]
+
+# ── OVERVIEW / 概述 ─────────────────────────────────────────────
+overview: >
+  InvokeAI uses its own node graph format distinct from ComfyUI.
+  Key differences:
+  1. Node IDs are UUIDs (not sequential integers).
+  2. Connections use explicit source/destination port notation.
+  3. Node types use snake_case names (e.g. main_model_loader, not CheckpointLoaderSimple).
+  4. The graph lives inside a "nodes" wrapper object with edges defined separately.
+  5. InvokeAI has built-in queue/batch management; no manual batch_size node needed.
+  /
+  InvokeAI使用独立的节点图格式，与ComfyUI不通用。
+  主要差异：节点ID为UUID、连接用源/目标端口名、节点类型用蛇形命名、
+  图结构含独立edges数组、内置队列管理无需批处理节点。
+
+# ── INVOKEAI NATIVE NODE NAMES / InvokeAI原生节点名 ─────────────
+# These map to ComfyUI equivalents / 与ComfyUI节点的对应关系
+
+node_mapping:
+  CheckpointLoaderSimple:   main_model_loader
+  CLIPTextEncode:           compel          # SD1.5/SDXL positive/negative
+  CLIPTextEncodeSDXL:       sdxl_compel_prompt
+  EmptyLatentImage:         noise           # InvokeAI uses noise node
+  KSampler:                 denoise_latents
+  VAEDecode:                l2i             # latent to image
+  VAEEncode:                i2l             # image to latent
+  SaveImage:                save_image
+  LoadImage:                image
+  LoraLoader:               lora_loader
+  ControlNetApply:          controlnet
+  IPAdapterAdvanced:        ip_adapter
+
+# ── WORKFLOW JSON STRUCTURE / 工作流JSON结构 ─────────────────────
+workflow_structure:
+  format:
+    meta:
+      version: "3.0.0"
+      name: string
+      description: string (optional)
+    nodes:
+      type: array
+      items: "id(UUID), type(node_type_string), label(string), isOpen(bool), notes(string), inputs(dict of field→value), outputs(dict)"
+    edges:
+      type: array
+      items: "source: {node_id, field}, destination: {node_id, field}"
+
+  example_uuid_pattern: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+  uuid_generation_note: >
+    When generating UUIDs, use sequential fake UUIDs for readability:
+    node-0001-0000-0000-000000000001, etc. Users can re-randomize in the editor.
+    生成UUID时使用可读的顺序格式，用户可在编辑器中重新随机化。
+
+# ── TXT2IMG TEMPLATE / 文生图模板 ────────────────────────────────
+txt2img_template:
+  description: "Minimal SD1.5 or SDXL txt2img in InvokeAI nodes / 最小可用文生图"
+
+  nodes:
+    - id: "node-0001-0000-0000-000000000001"
+      type: main_model_loader
+      label: "Load Model / 加载模型"
+      inputs:
+        model:
+          model_name: "{model_name}"
+          base_model: "{base_model}"   # sd-1, sd-2, sdxl
+
+    - id: "node-0002-0000-0000-000000000002"
+      type: compel                    # use sdxl_compel_prompt for SDXL
+      label: "Positive Prompt / 正向提示词"
+      inputs:
+        prompt: "{positive_prompt}"
+
+    - id: "node-0003-0000-0000-000000000003"
+      type: compel
+      label: "Negative Prompt / 负向提示词"
+      inputs:
+        prompt: "{negative_prompt}"
+
+    - id: "node-0004-0000-0000-000000000004"
+      type: noise
+      label: "Noise / 噪声（潜空间）"
+      inputs:
+        seed: "{seed}"
+        width: "{width}"
+        height: "{height}"
+        use_cpu: false
+
+    - id: "node-0005-0000-0000-000000000005"
+      type: denoise_latents
+      label: "Denoise / 采样去噪"
+      inputs:
+        cfg_scale: "{cfg}"
+        scheduler: "{scheduler}"
+        steps: "{steps}"
+        denoising_start: 0.0
+        denoising_end: 1.0
+
+    - id: "node-0006-0000-0000-000000000006"
+      type: l2i
+      label: "Decode to Image / 解码为图像"
+      inputs:
+        tiled: false
+        fp32: false
+
+    - id: "node-0007-0000-0000-000000000007"
+      type: save_image
+      label: "Save Image / 保存"
+      inputs:
+        board: null
+        is_intermediate: false
+
+  edges:
+    - {source: {node_id: "node-0001", field: "unet"},        destination: {node_id: "node-0005", field: "unet"}}
+    - {source: {node_id: "node-0001", field: "clip"},        destination: {node_id: "node-0002", field: "clip"}}
+    - {source: {node_id: "node-0001", field: "clip"},        destination: {node_id: "node-0003", field: "clip"}}
+    - {source: {node_id: "node-0001", field: "vae"},         destination: {node_id: "node-0006", field: "vae"}}
+    - {source: {node_id: "node-0002", field: "conditioning"}, destination: {node_id: "node-0005", field: "positive_conditioning"}}
+    - {source: {node_id: "node-0003", field: "conditioning"}, destination: {node_id: "node-0005", field: "negative_conditioning"}}
+    - {source: {node_id: "node-0004", field: "noise"},       destination: {node_id: "node-0005", field: "noise"}}
+    - {source: {node_id: "node-0005", field: "latents"},     destination: {node_id: "node-0006", field: "latents"}}
+    - {source: {node_id: "node-0006", field: "image"},       destination: {node_id: "node-0007", field: "image"}}
+
+# ── LORA INSERTION / LoRA插入 ────────────────────────────────────
+lora_pattern:
+  node_type: lora_loader
+  inputs:
+    lora:
+      model_name: "{lora_name}"
+      base_model: "{base_model}"
+    weight: "{weight}"
+  connections:
+    receives: [unet from main_model_loader, clip from main_model_loader]
+    sends:    [unet to denoise_latents, clip to compel nodes]
+  note: >
+    InvokeAI LoRA loader threads UNET and CLIP same as ComfyUI LoraLoader.
+    Chain multiple LoRAs sequentially.
+    InvokeAI的LoRA加载器与ComfyUI相同，需串联UNET和CLIP。
+
+# ── KEY DIFFERENCES FROM COMFYUI / 与ComfyUI的关键差异 ──────────
+differences_from_comfyui:
+  - "Node IDs: UUID strings vs sequential integers"
+  - "Node types: snake_case vs PascalCase (e.g. main_model_loader vs CheckpointLoaderSimple)"
+  - "Sampler: denoise_latents node (not KSampler); cfg is cfg_scale field"
+  - "Latent: noise node (not EmptyLatentImage)"
+  - "Decode: l2i node (not VAEDecode)"
+  - "Encode: i2l node (not VAEEncode)"
+  - "SDXL prompt: sdxl_compel_prompt node (has positive_prompt + positive_style fields)"
+  - "Connections: explicit source/destination field names vs slot indices"
+  - "Flux: not officially supported in InvokeAI v4 node editor; use standard queue instead"
+
+# ── IMPORT NOTE / 导入说明 ───────────────────────────────────────
+import_instructions: >
+  To load in InvokeAI:
+  1. Open InvokeAI web UI
+  2. Go to Node Editor tab
+  3. Click the menu (⋮) → Import Workflow
+  4. Select the generated invokeai_workflow.json
+  /
+  在InvokeAI中加载：
+  1. 打开InvokeAI Web界面
+  2. 进入节点编辑器标签
+  3. 点击菜单(⋮) → 导入工作流
+  4. 选择生成的invokeai_workflow.json文件
+
+# ── COMMON ISSUES / 常见问题 ─────────────────────────────────────
+common_issues:
+  - symptom: "Node type not found / 找不到节点类型"
+    fix: "InvokeAI version mismatch. Node names changed between v3 and v4. / 版本不匹配，v3和v4节点名有差异"
+  - symptom: "UUID conflict on import / 导入时UUID冲突"
+    fix: "InvokeAI auto-regenerates IDs on import; no action needed. / 导入时自动重新生成ID"
+  - symptom: "Flux model not available in node editor"
+    fix: "Use InvokeAI queue/generate tab for Flux; node editor support is v4.3+. / Flux需v4.3+的节点编辑器支持"

@@ -1,0 +1,46 @@
+{
+  "meta": {
+    "test_id": "TC013",
+    "description": "SDXL txt2img → InvokeAI node editor expected output summary",
+    "format": "invokeai_workflow.json"
+  },
+  "expected_workflow_summary": {
+    "target_platform": "invokeai",
+    "model_family": "sdxl",
+    "pipeline_type": "txt2img",
+    "total_nodes": 7,
+    "node_types": [
+      "main_model_loader",
+      "sdxl_compel_prompt",
+      "sdxl_compel_prompt",
+      "noise",
+      "denoise_latents",
+      "l2i",
+      "save_image"
+    ],
+    "key_differences_from_comfyui": [
+      "Node IDs are UUID format strings (e.g. node-0001-0000-0000-000000000001), NOT sequential integers",
+      "Node types use snake_case (main_model_loader, denoise_latents), NOT PascalCase (CheckpointLoaderSimple, KSampler)",
+      "Edges use explicit {source: {node_id, field}, destination: {node_id, field}} format, NOT [from_id, slot, to_id, slot, link_id] format",
+      "SDXL prompts use sdxl_compel_prompt with positive_prompt + positive_style fields",
+      "Latent init uses noise node, NOT EmptyLatentImage",
+      "Decode uses l2i node, NOT VAEDecode"
+    ],
+    "expected_edges": [
+      "main_model_loader.unet → denoise_latents.unet",
+      "main_model_loader.clip → sdxl_compel_prompt(+).clip",
+      "main_model_loader.clip → sdxl_compel_prompt(-).clip",
+      "main_model_loader.vae → l2i.vae",
+      "sdxl_compel_prompt(+).conditioning → denoise_latents.positive_conditioning",
+      "sdxl_compel_prompt(-).conditioning → denoise_latents.negative_conditioning",
+      "noise.noise → denoise_latents.noise",
+      "denoise_latents.latents → l2i.latents",
+      "l2i.image → save_image.image"
+    ]
+  },
+  "expected_dependencies": {
+    "checkpoints": ["sd_xl_base_1.0 (or compatible SDXL model)"],
+    "custom_nodes": [],
+    "platform_note": "Works with InvokeAI v4.x Node Editor"
+  }
+}

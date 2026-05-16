@@ -1,0 +1,666 @@
+{
+  "last_node_id": 11,
+  "last_link_id": 15,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "CheckpointLoaderSimple",
+      "pos": [
+        20,
+        20
+      ],
+      "size": {
+        "0": 315,
+        "1": 98
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            1
+          ],
+          "slot_index": 0,
+          "shape": 3
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            2,
+            3
+          ],
+          "slot_index": 1,
+          "shape": 3
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            4,
+            5
+          ],
+          "slot_index": 2,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&amp;R": "Load Checkpoint"
+      },
+      "widgets_values": [
+        "sd_xl_base_1.0.safetensors"
+      ]
+    },
+    {
+      "id": 2,
+      "type": "CLIPTextEncodeSDXL",
+      "pos": [
+        370,
+        20
+      ],
+      "size": {
+        "0": 400,
+        "1": 200
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            6
+          ],
+          "slot_index": 0,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&amp;R": "Positive Prompt"
+      },
+      "widgets_values": [
+        "photo of a person, highly detailed, 8k, professional lighting",
+        "photo of a person, highly detailed, 8k, professional lighting",
+        1024,
+        1024,
+        0,
+        0,
+        1024,
+        1024
+      ]
+    },
+    {
+      "id": 3,
+      "type": "CLIPTextEncodeSDXL",
+      "pos": [
+        370,
+        240
+      ],
+      "size": {
+        "0": 400,
+        "1": 200
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 3
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            7
+          ],
+          "slot_index": 0,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&amp;R": "Negative Prompt"
+      },
+      "widgets_values": [
+        "worst quality, low quality, blurry, distorted",
+        "worst quality, low quality, blurry, distorted",
+        1024,
+        1024,
+        0,
+        0,
+        1024,
+        1024
+      ]
+    },
+    {
+      "id": 4,
+      "type": "LoadImage",
+      "pos": [
+        370,
+        460
+      ],
+      "size": {
+        "0": 315,
+        "1": 314
+      },
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            8
+          ],
+          "slot_index": 0,
+          "shape": 3
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null,
+          "slot_index": 1,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Load Reference Face (IPAdapter FaceID)",
+        "_comment": "Reference face image for IPAdapter FaceID identity transfer."
+      },
+      "widgets_values": [
+        "reference_face.png",
+        "image"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "LoadImage",
+      "pos": [
+        370,
+        800
+      ],
+      "size": {
+        "0": 315,
+        "1": 314
+      },
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            9
+          ],
+          "slot_index": 0,
+          "shape": 3
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null,
+          "slot_index": 1,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&amp;R": "Input Image (img2img)",
+        "Node name for S&R": "Load Input Image (img2img base)",
+        "_comment": "Base image for img2img generation. Encoded by VAEEncode (node 8)."
+      },
+      "widgets_values": [
+        "input_image.png",
+        "image"
+      ]
+    },
+    {
+      "id": 6,
+      "type": "IPAdapterUnifiedLoader",
+      "pos": [
+        720,
+        20
+      ],
+      "size": {
+        "0": 315,
+        "1": 106
+      },
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            10
+          ],
+          "slot_index": 0,
+          "shape": 3
+        },
+        {
+          "name": "ipadapter",
+          "type": "IPADAPTER",
+          "links": [
+            11
+          ],
+          "slot_index": 1,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&amp;R": "IPAdapter Loader"
+      },
+      "widgets_values": [
+        "SDXL FACEID"
+      ]
+    },
+    {
+      "id": 7,
+      "type": "IPAdapterAdvanced",
+      "pos": [
+        1070,
+        20
+      ],
+      "size": {
+        "0": 315,
+        "1": 260
+      },
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 10
+        },
+        {
+          "name": "ipadapter",
+          "type": "IPADAPTER",
+          "link": 11
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 8
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            12
+          ],
+          "slot_index": 0,
+          "shape": 3
+        },
+        {
+          "name": "image_negative",
+          "type": "IMAGE",
+          "links": null,
+          "slot_index": 1,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&amp;R": "Apply IPAdapter"
+      },
+      "widgets_values": [
+        1.0,
+        "linear",
+        0.0,
+        1.0,
+        "concat"
+      ]
+    },
+    {
+      "id": 8,
+      "type": "VAEEncode",
+      "pos": [
+        720,
+        800
+      ],
+      "size": {
+        "0": 315,
+        "1": 98
+      },
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pixels",
+          "type": "IMAGE",
+          "link": 9
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 4
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            13
+          ],
+          "slot_index": 0,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&amp;R": "VAE Encode",
+        "Node name for S&R": "VAE Encode (img2img input)",
+        "_comment": "Encodes input_image.png for img2img denoising. For inpainting use VAEEncodeForInpaint instead."
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 9,
+      "type": "KSampler",
+      "pos": [
+        1420,
+        20
+      ],
+      "size": {
+        "0": 315,
+        "1": 262
+      },
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 12
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 6
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 7
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 13
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            14
+          ],
+          "slot_index": 0,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&amp;R": "KSampler"
+      },
+      "widgets_values": [
+        123456789,
+        "fixed",
+        25,
+        7.0,
+        "dpmpp_2m",
+        "karras",
+        0.75
+      ]
+    },
+    {
+      "id": 10,
+      "type": "VAEDecode",
+      "pos": [
+        1770,
+        20
+      ],
+      "size": {
+        "0": 315,
+        "1": 98
+      },
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 14
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 5
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            15
+          ],
+          "slot_index": 0,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&amp;R": "VAE Decode"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 11,
+      "type": "SaveImage",
+      "pos": [
+        2120,
+        20
+      ],
+      "size": {
+        "0": 315,
+        "1": 120
+      },
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 15
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&amp;R": "Save Image"
+      },
+      "widgets_values": [
+        "SDXL_faceid_output"
+      ]
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      6,
+      0,
+      "MODEL"
+    ],
+    [
+      2,
+      1,
+      1,
+      2,
+      0,
+      "CLIP"
+    ],
+    [
+      3,
+      1,
+      1,
+      3,
+      0,
+      "CLIP"
+    ],
+    [
+      4,
+      1,
+      2,
+      8,
+      1,
+      "VAE"
+    ],
+    [
+      5,
+      1,
+      2,
+      10,
+      1,
+      "VAE"
+    ],
+    [
+      6,
+      2,
+      0,
+      9,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      7,
+      3,
+      0,
+      9,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      8,
+      4,
+      0,
+      7,
+      2,
+      "IMAGE"
+    ],
+    [
+      9,
+      5,
+      0,
+      8,
+      0,
+      "IMAGE"
+    ],
+    [
+      10,
+      6,
+      0,
+      7,
+      0,
+      "MODEL"
+    ],
+    [
+      11,
+      6,
+      1,
+      7,
+      1,
+      "IPADAPTER"
+    ],
+    [
+      12,
+      7,
+      0,
+      9,
+      0,
+      "MODEL"
+    ],
+    [
+      13,
+      8,
+      0,
+      9,
+      3,
+      "LATENT"
+    ],
+    [
+      14,
+      9,
+      0,
+      10,
+      0,
+      "LATENT"
+    ],
+    [
+      15,
+      10,
+      0,
+      11,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": [
+    {
+      "title": "Face ID Reference",
+      "bounding": [
+        370,
+        460,
+        315,
+        314
+      ],
+      "color": "#3f7f3f"
+    },
+    {
+      "title": "Image to Image",
+      "bounding": [
+        370,
+        800,
+        315,
+        314
+      ],
+      "color": "#7f3f7f"
+    }
+  ],
+  "config": {},
+  "extra": {},
+  "version": 0.4
+}

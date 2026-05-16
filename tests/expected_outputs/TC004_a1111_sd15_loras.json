@@ -1,0 +1,36 @@
+{
+  "meta": {
+    "test_id": "TC004",
+    "description": "SD1.5 simple + LoRA → A1111 params expected output summary",
+    "format": "params.json"
+  },
+  "expected_params_summary": {
+    "target_platform": "a1111",
+    "model_family": "sd15",
+    "pipeline_type": "txt2img",
+    "key_fields": [
+      "prompt (with embedded <lora:add_detail:0.7> syntax)",
+      "negative_prompt",
+      "sampler_name",
+      "steps",
+      "cfg_scale",
+      "seed",
+      "width",
+      "height"
+    ],
+    "critical_enforcements": [
+      "R16: LoRA syntax <lora:add_detail:0.7> is embedded IN the prompt string, NOT as a separate parameter",
+      "R17: Width and height MUST be divisible by 8",
+      "Width should be 512 (SD1.5 default)",
+      "Sampler should be dpmpp_2m with karras scheduler",
+      "Steps should be 20 (SD1.5 default)",
+      "CFG scale should be 7.0",
+      "Seed should be -1 (random)"
+    ],
+    "prompt_contains": ["a cat sitting on a chair", "<lora:add_detail:0.7>"]
+  },
+  "expected_dependencies": {
+    "checkpoints": ["dreamshaper_8.safetensors or similar SD1.5 checkpoint"],
+    "loras": ["add_detail.safetensors"]
+  }
+}

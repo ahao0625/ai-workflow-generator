@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "test_id": "TC010",
+    "description": "SD3 Ultra → Stability AI API expected output summary",
+    "format": "request.json/form-data"
+  },
+  "expected_api_summary": {
+    "target_platform": "stability",
+    "model_family": "sd3",
+    "pipeline_type": "txt2img",
+    "api_endpoint": "https://api.stability.ai/v2beta/stable-image/generate/ultra or /core",
+    "request_format": "multipart/form-data",
+    "key_form_fields": [
+      "prompt",
+      "output_format (png)",
+      "aspect_ratio (16:9)"
+    ],
+    "auth_instruction": "Authorization: Bearer $STABILITY_API_KEY header",
+    "critical_enforcements": [
+      "Has auth header instruction",
+      "Aspect ratio is 16:9 (from user request)",
+      "Prompt contains 'a glass orb containing a galaxy'",
+      "Uses multipart/form-data (not JSON body) for Stability API",
+      "Output format png is specified"
+    ]
+  },
+  "expected_dependencies": {
+    "api_service": "Stability AI (stability.ai or api.stability.ai)",
+    "auth_required": "STABILITY_API_KEY environment variable or token",
+    "no_local_models_required": true
+  }
+}

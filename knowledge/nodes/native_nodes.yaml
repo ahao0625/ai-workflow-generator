@@ -154,32 +154,32 @@ CLIPSetLastLayer:
 # ── CONDITIONING / 条件控制 ───────────────────────────────────────
 
 ConditioningCombine:
-  inputs: [conditioning_1: CONDITIONING, conditioning_2: CONDITIONING]
+  inputs: "conditioning_1: CONDITIONING, conditioning_2: CONDITIONING"
   outputs: [CONDITIONING]
   desc: "Merge two conditionings / 合并两个条件"
 
 ConditioningConcat:
-  inputs: [conditioning_to: CONDITIONING, conditioning_from: CONDITIONING]
+  inputs: "conditioning_to: CONDITIONING, conditioning_from: CONDITIONING"
   outputs: [CONDITIONING]
 
 ConditioningSetArea:
   desc: "Regional prompt with bounding box / 区域提示词（矩形区域）"
-  inputs: [conditioning: CONDITIONING, width: INT, height: INT, x: INT, y: INT, strength: FLOAT]
+  inputs: "conditioning: CONDITIONING, width: INT, height: INT, x: INT, y: INT, strength: FLOAT"
   outputs: [CONDITIONING]
 
 ConditioningSetMask:
   desc: "Apply conditioning to mask region / 将条件应用于蒙版区域"
-  inputs: [conditioning: CONDITIONING, mask: MASK, strength: FLOAT, set_cond_area: ENUM]
+  inputs: "conditioning: CONDITIONING, mask: MASK, strength: FLOAT, set_cond_area: ENUM"
   outputs: [CONDITIONING]
 
 ConditioningZeroOut:
-  inputs: [conditioning: CONDITIONING]
+  inputs: "conditioning: CONDITIONING"
   outputs: [CONDITIONING]
   desc: "Create empty/null conditioning / 创建空条件（用于无分类器引导）"
 
 ConditioningSetTimestepRange:
   desc: "Restrict conditioning to timestep range / 限制条件在时间步范围内（用于Refiner）"
-  inputs: [conditioning: CONDITIONING, start: FLOAT, end: FLOAT]
+  inputs: "conditioning: CONDITIONING, start: FLOAT, end: FLOAT"
   outputs: [CONDITIONING]
 
 ControlNetApply:
@@ -206,12 +206,12 @@ ControlNetApplyAdvanced:
 
 InpaintConditioning:
   desc: "Conditioning for inpaint models / 内绘模型专用条件"
-  inputs: [positive: CONDITIONING, negative: CONDITIONING, vae: VAE, pixels: IMAGE, mask: MASK]
+  inputs: "positive: CONDITIONING, negative: CONDITIONING, vae: VAE, pixels: IMAGE, mask: MASK"
   outputs: [positive: CONDITIONING, negative: CONDITIONING, latent: LATENT]
 
 FluxGuidance:
   desc: "Flux-specific guidance strength / Flux专属引导强度节点"
-  inputs: [conditioning: CONDITIONING, guidance: FLOAT]
+  inputs: "conditioning: CONDITIONING, guidance: FLOAT"
   outputs: [CONDITIONING]
   use_for: [flux]
   note: "replaces cfg in KSampler for Flux / 在Flux中替代KSampler的cfg参数"
@@ -220,58 +220,58 @@ FluxGuidance:
 
 EmptyLatentImage:
   desc: "Create blank latent (SD1.5/SDXL 4ch) / 创建空潜空间（4通道，用于SD1.5/SDXL）"
-  inputs: [width: INT, height: INT, batch_size: INT]
+  inputs: "width: INT, height: INT, batch_size: INT"
   outputs: [LATENT]
 
 EmptySD3LatentImage:
   desc: "Create blank latent for SD3/Flux (16ch) / 创建空潜空间（16通道，用于SD3/Flux）"
-  inputs: [width: INT, height: INT, batch_size: INT]
+  inputs: "width: INT, height: INT, batch_size: INT"
   outputs: [LATENT]
 
 LatentUpscale:
   desc: "Upscale latent space / 潜空间放大"
-  inputs: [samples: LATENT, upscale_method: ENUM, width: INT, height: INT, crop: ENUM]
+  inputs: "samples: LATENT, upscale_method: ENUM, width: INT, height: INT, crop: ENUM"
   outputs: [LATENT]
 
 LatentUpscaleBy:
   desc: "Upscale latent by factor / 按倍数放大潜空间"
-  inputs: [samples: LATENT, upscale_method: ENUM, scale_by: FLOAT]
+  inputs: "samples: LATENT, upscale_method: ENUM, scale_by: FLOAT"
   outputs: [LATENT]
 
 LatentComposite:
   desc: "Composite two latents / 合并两个潜空间（用于局部重绘）"
-  inputs: [samples_to: LATENT, samples_from: LATENT, x: INT, y: INT, feather: INT]
+  inputs: "samples_to: LATENT, samples_from: LATENT, x: INT, y: INT, feather: INT"
   outputs: [LATENT]
 
 LatentCrop:
-  inputs: [samples: LATENT, width: INT, height: INT, x: INT, y: INT]
+  inputs: "samples: LATENT, width: INT, height: INT, x: INT, y: INT"
   outputs: [LATENT]
 
 LatentFlip:
-  inputs: [samples: LATENT, flip_method: ENUM [x-axis, y-axis]]
+  inputs: "samples: LATENT, flip_method: ENUM [x-axis, y-axis]"
   outputs: [LATENT]
 
 # ── VAE ENCODE/DECODE / VAE编解码 ────────────────────────────────
 
 VAEEncode:
   desc: "Encode image to latent / 图像编码为潜空间"
-  inputs: [pixels: IMAGE, vae: VAE]
+  inputs: "pixels: IMAGE, vae: VAE"
   outputs: [LATENT]
 
 VAEEncodeForInpaint:
   desc: "Encode image+mask for inpainting / 为内绘编码图像+蒙版"
-  inputs: [pixels: IMAGE, vae: VAE, mask: MASK, grow_mask_by: INT [default 6]]
+  inputs: "pixels: IMAGE, vae: VAE, mask: MASK, grow_mask_by: INT [default 6]"
   outputs: [LATENT]
   critical: "MUST use this (not VAEEncode) for inpainting / 内绘必须使用此节点"
 
 VAEDecode:
   desc: "Decode latent to image / 潜空间解码为图像"
-  inputs: [samples: LATENT, vae: VAE]
+  inputs: "samples: LATENT, vae: VAE"
   outputs: [IMAGE]
 
 VAEDecodeTiled:
   desc: "Tiled decode for large images (saves VRAM) / 分块解码（大图省显存）"
-  inputs: [samples: LATENT, vae: VAE, tile_size: INT [default 512]]
+  inputs: "samples: LATENT, vae: VAE, tile_size: INT [default 512]"
   outputs: [IMAGE]
 
 # ── SAMPLERS / 采样器 ─────────────────────────────────────────────
@@ -316,68 +316,68 @@ KSamplerAdvanced:
 # ── IMAGE PROCESSING / 图像处理 ──────────────────────────────────
 
 ImageScale:
-  inputs: [image: IMAGE, upscale_method: ENUM, width: INT, height: INT, crop: ENUM]
+  inputs: "image: IMAGE, upscale_method: ENUM, width: INT, height: INT, crop: ENUM"
   outputs: [IMAGE]
 
 ImageScaleBy:
-  inputs: [image: IMAGE, upscale_method: ENUM, scale_by: FLOAT]
+  inputs: "image: IMAGE, upscale_method: ENUM, scale_by: FLOAT"
   outputs: [IMAGE]
 
 ImageUpscaleWithModel:
   desc: "Pixel upscale with AI model / 使用AI模型超分"
-  inputs: [upscale_model: UPSCALE_MODEL, image: IMAGE]
+  inputs: "upscale_model: UPSCALE_MODEL, image: IMAGE"
   outputs: [IMAGE]
 
 ImageCrop:
-  inputs: [image: IMAGE, width: INT, height: INT, x: INT, y: INT]
+  inputs: "image: IMAGE, width: INT, height: INT, x: INT, y: INT"
   outputs: [IMAGE]
 
 ImagePadForOutpaint:
   desc: "Pad image for outpainting / 为外扩绘图填充图像"
-  inputs: [image: IMAGE, left: INT, top: INT, right: INT, bottom: INT, feathering: INT]
+  inputs: "image: IMAGE, left: INT, top: INT, right: INT, bottom: INT, feathering: INT"
   outputs: [IMAGE, MASK]
 
 ImageBatch:
-  inputs: [image1: IMAGE, image2: IMAGE]
+  inputs: "image1: IMAGE, image2: IMAGE"
   outputs: [IMAGE]
 
 ImageComposite:
-  inputs: [destination: IMAGE, source: IMAGE, x: INT, y: INT, mask: MASK (opt)]
+  inputs: "destination: IMAGE, source: IMAGE, x: INT, y: INT, mask: MASK (opt)"
   outputs: [IMAGE]
 
 ImageColorMatch: {}
 ImageBlend:
-  inputs: [image1: IMAGE, image2: IMAGE, blend_factor: FLOAT, blend_mode: ENUM]
+  inputs: "image1: IMAGE, image2: IMAGE, blend_factor: FLOAT, blend_mode: ENUM"
   outputs: [IMAGE]
 
 # ── MASK OPERATIONS / 蒙版操作 ────────────────────────────────────
 
 MaskToImage:
-  inputs: [mask: MASK]
+  inputs: "mask: MASK"
   outputs: [IMAGE]
 
 ImageToMask:
-  inputs: [image: IMAGE, channel: ENUM [red, green, blue, alpha]]
+  inputs: "image: IMAGE, channel: ENUM [red, green, blue, alpha]"
   outputs: [MASK]
 
 MaskComposite:
-  inputs: [destination: MASK, source: MASK, x: INT, y: INT, operation: ENUM]
+  inputs: "destination: MASK, source: MASK, x: INT, y: INT, operation: ENUM"
   outputs: [MASK]
 
 GrowMask:
-  inputs: [mask: MASK, expand: INT, tapered_corners: BOOLEAN]
+  inputs: "mask: MASK, expand: INT, tapered_corners: BOOLEAN"
   outputs: [MASK]
 
 FeatherMask:
-  inputs: [mask: MASK, left: INT, top: INT, right: INT, bottom: INT]
+  inputs: "mask: MASK, left: INT, top: INT, right: INT, bottom: INT"
   outputs: [MASK]
 
 SolidMask:
-  inputs: [value: FLOAT, width: INT, height: INT]
+  inputs: "value: FLOAT, width: INT, height: INT"
   outputs: [MASK]
 
 InvertMask:
-  inputs: [mask: MASK]
+  inputs: "mask: MASK"
   outputs: [MASK]
 
 # ── OUTPUT / 输出 ─────────────────────────────────────────────────
@@ -392,13 +392,13 @@ SaveImage:
 
 PreviewImage:
   desc: "Preview only, no disk save / 仅预览，不保存到磁盘"
-  inputs: [images: IMAGE]
+  inputs: "images: IMAGE"
   outputs: []
   terminal_node: true
 
 SaveAnimatedWEBP:
   desc: "Save animated WEBP / 保存动态WEBP"
-  inputs: [images: IMAGE, filename_prefix: STRING, fps: FLOAT, lossless: BOOLEAN, quality: INT]
+  inputs: "images: IMAGE, filename_prefix: STRING, fps: FLOAT, lossless: BOOLEAN, quality: INT"
   outputs: []
 
 # ── UTILITY / 实用工具 ────────────────────────────────────────────
@@ -411,18 +411,18 @@ Note:
   desc: "Text comment / 文字注释（不影响执行）"
 
 CLIPMergeSimple:
-  inputs: [clip1: CLIP, clip2: CLIP, ratio: FLOAT]
+  inputs: "clip1: CLIP, clip2: CLIP, ratio: FLOAT"
   outputs: [CLIP]
 
 ModelMergeSimple:
-  inputs: [model1: MODEL, model2: MODEL, ratio: FLOAT]
+  inputs: "model1: MODEL, model2: MODEL, ratio: FLOAT"
   outputs: [MODEL]
 
 VAEDecodeTiled: {}  # see above
 
 VideoLinearCFGGuidance:
   desc: "Linear CFG for video models / 视频模型线性CFG（SVD用）"
-  inputs: [model: MODEL, min_cfg: FLOAT]
+  inputs: "model: MODEL, min_cfg: FLOAT"
   outputs: [MODEL]
 
 SVD_img2vid_Conditioning:
@@ -434,5 +434,5 @@ SVD_img2vid_Conditioning:
 
 ImageOnlyCheckpointLoader:
   desc: "Load image-only checkpoint (SVD/video) / 加载图像专用模型（SVD/视频）"
-  inputs: [ckpt_name: STRING]
+  inputs: "ckpt_name: STRING"
   outputs: [MODEL, CLIP_VISION, VAE]

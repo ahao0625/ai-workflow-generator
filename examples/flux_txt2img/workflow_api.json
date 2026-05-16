@@ -1,0 +1,76 @@
+{
+  "1": {
+    "inputs": {
+      "clip_name1": "clip_l.safetensors",
+      "clip_name2": "t5xxl_fp16.safetensors",
+      "type": "flux"
+    },
+    "class_type": "DualCLIPLoader"
+  },
+  "2": {
+    "inputs": {
+      "unet_name": "flux1-dev.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader"
+  },
+  "3": {
+    "inputs": {
+      "vae_name": "ae.safetensors"
+    },
+    "class_type": "VAELoader"
+  },
+  "4": {
+    "inputs": {
+      "clip": ["1", 0],
+      "text": "a beautiful landscape with mountains and a lake at sunset, golden hour lighting, photorealistic",
+      "width": 1024,
+      "height": 1024
+    },
+    "class_type": "CLIPTextEncodeFlux"
+  },
+  "5": {
+    "inputs": {
+      "conditioning": ["4", 0],
+      "guidance": 3.5
+    },
+    "class_type": "FluxGuidance"
+  },
+  "6": {
+    "inputs": {
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1
+    },
+    "class_type": "EmptySD3LatentImage"
+  },
+  "7": {
+    "inputs": {
+      "seed": -1,
+      "steps": 20,
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0,
+      "model": ["2", 0],
+      "positive": ["5", 0],
+      "negative": ["5", 0],
+      "latent_image": ["6", 0]
+    },
+    "class_type": "KSampler"
+  },
+  "8": {
+    "inputs": {
+      "samples": ["7", 0],
+      "vae": ["3", 0]
+    },
+    "class_type": "VAEDecode"
+  },
+  "9": {
+    "inputs": {
+      "filename_prefix": "Flux_txt2img",
+      "images": ["8", 0]
+    },
+    "class_type": "SaveImage"
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "meta": {
+    "test_id": "TC011",
+    "description": "SDXL + OpenPose + Canny ControlNets → ComfyUI expected output summary",
+    "format": "workflow.json"
+  },
+  "expected_workflow_summary": {
+    "total_nodes": 13,
+    "node_classes": [
+      "CheckpointLoaderSimple",
+      "CLIPTextEncodeSDXL",
+      "CLIPTextEncodeSDXL",
+      "LoadImage",
+      "OpenposePreprocessor",
+      "ControlNetLoader",
+      "ControlNetApplyAdvanced",
+      "LoadImage",
+      "CannyEdgePreprocessor",
+      "ControlNetLoader",
+      "ControlNetApplyAdvanced",
+      "LoadImage",
+      "EmptyLatentImage",
+      "KSampler",
+      "VAEDecode",
+      "SaveImage"
+    ],
+    "critical_enforcements": [
+      "R11: Two ControlNetLoader nodes (one for OpenPose, one for Canny)",
+      "R11: Two ControlNetApplyAdvanced nodes chained SERIALLY (NOT parallel)",
+      "CN1 (OpenPose) output conditioning → CN2 (Canny) input conditioning",
+      "CN2 output conditioning → KSampler.positive",
+      "Each ControlNetApplyAdvanced receives its own ControlNetLoader output",
+      "Each ControlNet has its own input image and preprocessor",
+      "OpenPose uses OpenposePreprocessor (from comfyui_controlnet_aux)",
+      "Canny uses CannyEdgePreprocessor (from comfyui_controlnet_aux)"
+    ],
+    "chain_verification": "CheckpointLoaderSimple.MODEL → KSampler.model (unchanged by CNs, CNs only affect conditioning)"
+  },
+  "expected_dependencies": {
+    "checkpoints": ["juggernautXL_v9.safetensors"],
+    "controlnet": [
+      "controlnet-openpose-sdxl.safetensors",
+      "controlnet-canny-sdxl.safetensors"
+    ],
+    "custom_nodes": ["Fannovel16/comfyui_controlnet_aux"]
+  }
+}

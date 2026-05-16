@@ -2,7 +2,7 @@
 # All workflow generation passes through this schema before platform rendering.
 # 所有工作流生成在平台渲染前都通过此规范转换。
 
-ir_version: "1.0"
+ir_version: "2.0"
 
 # ============================================================
 # CORE FIELDS / 核心字段

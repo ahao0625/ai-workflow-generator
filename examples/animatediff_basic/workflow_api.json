@@ -1,0 +1,81 @@
+{
+  "1": {
+    "inputs": {
+      "ckpt_name": "dreamshaper_8.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple"
+  },
+  "2": {
+    "inputs": {
+      "clip": ["1", 1],
+      "text": "fire burning in a fireplace, cozy atmosphere, warm lighting, flickering flames"
+    },
+    "class_type": "CLIPTextEncode"
+  },
+  "3": {
+    "inputs": {
+      "clip": ["1", 1],
+      "text": "worst quality, low quality, blurry, static, text, watermark"
+    },
+    "class_type": "CLIPTextEncode"
+  },
+  "4": {
+    "inputs": {
+      "model_name": "mm_sd_v15_v2.safetensors"
+    },
+    "class_type": "LoadAnimateDiffModel"
+  },
+  "5": {
+    "inputs": {
+      "model": ["1", 0],
+      "motion_model": ["4", 0],
+      "context_length": 16,
+      "context_stride": 1,
+      "context_overlap": 4
+    },
+    "class_type": "AnimateDiffLoaderWithContext"
+  },
+  "6": {
+    "inputs": {
+      "width": 512,
+      "height": 512,
+      "batch_size": 16
+    },
+    "class_type": "EmptyLatentImage"
+  },
+  "7": {
+    "inputs": {
+      "seed": -1,
+      "steps": 20,
+      "cfg": 7.0,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras",
+      "denoise": 1.0,
+      "model": ["5", 0],
+      "positive": ["2", 0],
+      "negative": ["3", 0],
+      "latent_image": ["6", 0]
+    },
+    "class_type": "KSampler"
+  },
+  "8": {
+    "inputs": {
+      "samples": ["7", 0],
+      "vae": ["1", 2]
+    },
+    "class_type": "VAEDecode"
+  },
+  "9": {
+    "inputs": {
+      "images": ["8", 0],
+      "frame_rate": 8,
+      "loop_count": 0,
+      "filename_prefix": "AnimateDiff_fireplace",
+      "format": "video/h264-mp4",
+      "pix_fmt": "yuv420p",
+      "crf": 19,
+      "save_metadata": true
+    },
+    "class_type": "VHS_VideoCombine"
+  }
+}

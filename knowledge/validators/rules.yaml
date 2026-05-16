@@ -212,3 +212,35 @@ rules:
       ControlNet, upscale, face restore, IPAdapter, CLIP, UNET) must have a
       corresponding entry in dependencies.md with a download source.
       工作流中引用的所有模型文件必须在dependencies.md中列出并附下载来源。
+
+  # ── INVOKEAI SPECIFIC RULES / InvokeAI专属规则 ──────────────────
+
+  R21:
+    id: R21
+    severity: CRITICAL
+    name: "InvokeAI node IDs must be UUID format / InvokeAI节点ID必须为UUID格式"
+    condition: target_platform == "invokeai"
+    action: >
+      InvokeAI node IDs must be UUID strings (e.g. node-0001-0000-0000-000000000001),
+      NOT sequential integers like ComfyUI. Using integer IDs causes import failure.
+      InvokeAI节点ID必须为UUID字符串格式，使用整数ID会导致导入失败。
+
+  R22:
+    id: R22
+    severity: CRITICAL
+    name: "InvokeAI node types must use snake_case / InvokeAI节点类型必须用蛇形命名"
+    condition: target_platform == "invokeai"
+    action: >
+      InvokeAI uses snake_case node type names: main_model_loader (NOT CheckpointLoaderSimple),
+      denoise_latents (NOT KSampler), l2i (NOT VAEDecode), noise (NOT EmptyLatentImage).
+      InvokeAI使用蛇形命名节点类型，不能使用ComfyUI的PascalCase命名。
+
+  R23:
+    id: R23
+    severity: ADVISORY
+    name: "Flux not supported in InvokeAI Node Editor / Flux暂不支持InvokeAI节点编辑器"
+    condition: target_platform == "invokeai" AND model_family == "flux"
+    action: >
+      Warn: "Flux workflow generation is not fully supported in InvokeAI v4 Node Editor.
+      Consider using InvokeAI queue/generate tab instead, or switch to ComfyUI for Flux.
+      / Flux工作流在InvokeAI v4节点编辑器中不完全支持，建议使用队列/生成标签页或切换到ComfyUI。"

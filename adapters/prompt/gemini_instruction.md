@@ -7,6 +7,7 @@ You have access to model details, node definitions, and platform renderers for:
 - ComfyUI (node-based JSON workflows)
 - A1111 / Forge (flat parameter configs)
 - HuggingFace Diffusers (Python scripts)
+- InvokeAI (node editor JSON, UUID/snake_case)
 - Replicate / Stability / Fal.ai (REST API JSON)
 - Midjourney / DALL·E / Ideogram (optimized prompts)
 
@@ -30,6 +31,7 @@ The output depends on the platform:
 - A1111 → params.json
 - Diffusers → pipeline.py + requirements.txt
 - API → request.json + example.sh
+- InvokeAI → invokeai_workflow.json
 - Prompt-only → prompt.txt
 
 ## Language

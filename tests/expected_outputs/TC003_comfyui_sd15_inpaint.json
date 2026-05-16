@@ -1,0 +1,35 @@
+{
+  "meta": {
+    "test_id": "TC003",
+    "description": "SD1.5 inpaint → ComfyUI expected output summary",
+    "format": "workflow.json"
+  },
+  "expected_workflow_summary": {
+    "total_nodes": 9,
+    "node_classes": [
+      "CheckpointLoaderSimple",
+      "CLIPTextEncode",
+      "CLIPTextEncode",
+      "LoadImage",
+      "LoadImage",
+      "VAEEncodeForInpaint",
+      "KSampler",
+      "VAEDecode",
+      "SaveImage"
+    ],
+    "critical_enforcements": [
+      "R06: VAEEncodeForInpaint is used (NOT VAEEncode) for encoding the input image with mask",
+      "Input image (photo.png) connected to VAEEncodeForInpaint.pixels",
+      "Mask image (mask.png) connected to VAEEncodeForInpaint.mask",
+      "VAEEncodeForInpaint.LATENT → KSampler.latent_image",
+      "CheckpointLoaderSimple.VAE → VAEEncodeForInpaint.vae AND VAEDecode.vae"
+    ],
+    "input_files": ["photo.png", "mask.png"]
+  },
+  "expected_dependencies": {
+    "checkpoints": ["dreamshaper_8.safetensors"],
+    "loras": [],
+    "controlnet": [],
+    "custom_nodes": []
+  }
+}

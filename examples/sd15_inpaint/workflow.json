@@ -1,0 +1,179 @@
+{
+  "last_node_id": 9,
+  "last_link_id": 12,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "CheckpointLoaderSimple",
+      "pos": [50, 100],
+      "size": {"0": 315, "1": 98},
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        { "name": "MODEL", "type": "MODEL", "links": [1], "slot_index": 0, "shape": 3 },
+        { "name": "CLIP", "type": "CLIP", "links": [2, 3], "slot_index": 1, "shape": 3 },
+        { "name": "VAE", "type": "VAE", "links": [4, 7], "slot_index": 2, "shape": 3 }
+      ],
+      "properties": { "Node name for S&R": "Load Checkpoint" },
+      "widgets_values": ["dreamshaper_8.safetensors"]
+    },
+    {
+      "id": 2,
+      "type": "CLIPTextEncode",
+      "pos": [350, 100],
+      "size": {"0": 400, "1": 140},
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        { "name": "clip", "type": "CLIP", "link": 2 }
+      ],
+      "outputs": [
+        { "name": "CONDITIONING", "type": "CONDITIONING", "links": [8], "slot_index": 0, "shape": 3 }
+      ],
+      "properties": { "Node name for S&R": "Positive Prompt" },
+      "widgets_values": ["restore old photo, high quality, detailed, sharp"]
+    },
+    {
+      "id": 3,
+      "type": "CLIPTextEncode",
+      "pos": [350, 270],
+      "size": {"0": 400, "1": 140},
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        { "name": "clip", "type": "CLIP", "link": 3 }
+      ],
+      "outputs": [
+        { "name": "CONDITIONING", "type": "CONDITIONING", "links": [9], "slot_index": 0, "shape": 3 }
+      ],
+      "properties": { "Node name for S&R": "Negative Prompt" },
+      "widgets_values": ["worst quality, low quality, blurry, distorted, artifacts"]
+    },
+    {
+      "id": 4,
+      "type": "LoadImage",
+      "pos": [350, 460],
+      "size": {"0": 315, "1": 314},
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        { "name": "IMAGE", "type": "IMAGE", "links": [5], "slot_index": 0, "shape": 3 },
+        { "name": "MASK", "type": "MASK", "links": null, "slot_index": 1, "shape": 3 }
+      ],
+      "properties": { "Node name for S&R": "Load Input Image" },
+      "widgets_values": ["photo.png", "image"]
+    },
+    {
+      "id": 5,
+      "type": "LoadImage",
+      "pos": [350, 800],
+      "size": {"0": 315, "1": 314},
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        { "name": "IMAGE", "type": "IMAGE", "links": null, "slot_index": 0, "shape": 3 },
+        { "name": "MASK", "type": "MASK", "links": [6], "slot_index": 1, "shape": 3 }
+      ],
+      "properties": { "Node name for S&R": "Load Mask" },
+      "widgets_values": ["mask.png", "image"]
+    },
+    {
+      "id": 6,
+      "type": "VAEEncodeForInpaint",
+      "pos": [650, 460],
+      "size": {"0": 315, "1": 98},
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        { "name": "pixels", "type": "IMAGE", "link": 5 },
+        { "name": "vae", "type": "VAE", "link": 4 },
+        { "name": "mask", "type": "MASK", "link": 6 }
+      ],
+      "outputs": [
+        { "name": "LATENT", "type": "LATENT", "links": [10], "slot_index": 0, "shape": 3 }
+      ],
+      "properties": { "Node name for S&R": "VAE Encode (Inpaint)" },
+      "widgets_values": []
+    },
+    {
+      "id": 7,
+      "type": "KSampler",
+      "pos": [950, 100],
+      "size": {"0": 315, "1": 262},
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        { "name": "model", "type": "MODEL", "link": 1 },
+        { "name": "positive", "type": "CONDITIONING", "link": 8 },
+        { "name": "negative", "type": "CONDITIONING", "link": 9 },
+        { "name": "latent_image", "type": "LATENT", "link": 10 }
+      ],
+      "outputs": [
+        { "name": "LATENT", "type": "LATENT", "links": [11], "slot_index": 0, "shape": 3 }
+      ],
+      "properties": { "Node name for S&R": "KSampler" },
+      "widgets_values": [-1, "fixed", 20, 7.0, "dpmpp_2m", "karras", 0.9]
+    },
+    {
+      "id": 8,
+      "type": "VAEDecode",
+      "pos": [1550, 100],
+      "size": {"0": 315, "1": 98},
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        { "name": "samples", "type": "LATENT", "link": 11 },
+        { "name": "vae", "type": "VAE", "link": 7 }
+      ],
+      "outputs": [
+        { "name": "IMAGE", "type": "IMAGE", "links": [12], "slot_index": 0, "shape": 3 }
+      ],
+      "properties": { "Node name for S&R": "VAE Decode" },
+      "widgets_values": []
+    },
+    {
+      "id": 9,
+      "type": "SaveImage",
+      "pos": [1850, 100],
+      "size": {"0": 315, "1": 120},
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        { "name": "images", "type": "IMAGE", "link": 12 }
+      ],
+      "outputs": [],
+      "properties": { "Node name for S&R": "Save Image" },
+      "widgets_values": ["SD15_inpaint"]
+    }
+  ],
+  "links": [
+    [1, 1, 0, 7, 0, "MODEL"],
+    [2, 1, 1, 2, 0, "CLIP"],
+    [3, 1, 1, 3, 0, "CLIP"],
+    [4, 1, 2, 6, 1, "VAE"],
+    [5, 4, 0, 6, 0, "IMAGE"],
+    [6, 5, 1, 6, 2, "MASK"],
+    [7, 1, 2, 8, 1, "VAE"],
+    [8, 2, 0, 7, 1, "CONDITIONING"],
+    [9, 3, 0, 7, 2, "CONDITIONING"],
+    [10, 6, 0, 7, 3, "LATENT"],
+    [11, 7, 0, 8, 0, "LATENT"],
+    [12, 8, 0, 9, 0, "IMAGE"]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {},
+  "version": 0.4
+}
