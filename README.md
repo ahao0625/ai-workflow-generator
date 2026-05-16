@@ -16,7 +16,7 @@
 
 **EN — Download**
 
-> **Option 1 (Recommended):** Click [📦 Download ZIP](https://github.com/ahao0625/ai-workflow-generator/releases/download/v1.0.0/ai-workflow-generator-v1.0.0.zip)
+> **Option 1 (Recommended):** Click [📦 Download ZIP](https://github.com/ahao0625/ai-workflow-generator/releases/download/v1.0.0/ai-workflow-generator-v1.0.zip)
 
 > **Option 2 (Clone):**
 > ```bash
@@ -30,7 +30,7 @@
 
 **中 — 下载方式**
 
-> **方式一（推荐）：** 点击 [📦 下载压缩包](https://github.com/ahao0625/ai-workflow-generator/releases/download/v1.0.0/ai-workflow-generator-v1.0.0.zip)，解压即用。
+> **方式一（推荐）：** 点击 [📦 下载压缩包](https://github.com/ahao0625/ai-workflow-generator/releases/download/v1.0.0/ai-workflow-generator-v1.0.zip)，解压即用。
 
 > **方式二（Git）：**
 > ```bash
