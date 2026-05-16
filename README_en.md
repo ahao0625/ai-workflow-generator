@@ -3,20 +3,17 @@
 > Tell AI what you want, it generates ready-to-use image generation workflow files.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Platform: ComfyUI · A1111 · Diffusers · API](https://img.shields.io/badge/Platform-ComfyUI%20·%20A1111%20·%20Diffusers%20·%20API-blue.svg)]()
+[![Platform: ComfyUI · A1111 · Diffusers · API · InvokeAI](https://img.shields.io/badge/Platform-ComfyUI%20·%20A1111%20·%20Diffusers%20·%20API%20·%20InvokeAI-blue.svg)]()
 
 ---
 
 ## 📥 Download
 
-> **Option 1 (Recommended, no Git needed):** Click [📦 Download ZIP](https://github.com/ahao0625/ai-workflow-generator/releases/download/v1.0.0/ai-workflow-generator-v1.0.0.zip), unzip and go.
-
-> **Option 2 (Clone with Git):**
-> ```bash
-> git clone https://github.com/ahao0625/ai-workflow-generator.git
-> ```
-
-> **Option 3 (From GitHub):** Open the [repo](https://github.com/ahao0625/ai-workflow-generator), click **Code → Download ZIP**.
+| Method | Link |
+|--------|------|
+| **📦 One-click (Recommended)** | [ai-workflow-generator-v1.2.zip](https://github.com/ahao0625/ai-workflow-generator/releases/download/v1.2.0/ai-workflow-generator-v1.2.zip) |
+| **Git Clone** | `git clone https://github.com/ahao0625/ai-workflow-generator.git` |
+| **Release Page** | [GitHub Releases](https://github.com/ahao0625/ai-workflow-generator/releases) for all versions |
 
 ---
 
@@ -27,6 +24,7 @@ This is a **SKILL.md** — a specification that you give to any LLM (Claude, GPT
 | Target Platform | Output |
 |----------------|--------|
 | **ComfyUI** (node-based) | `workflow.json` — drag into ComfyUI, hit run |
+| **InvokeAI** (Node Editor) | `invokeai_workflow.json` — Import into Node Editor |
 | **A1111 / Forge** (web UI) | `params.json` — paste into WebUI |
 | **HuggingFace Diffusers** (Python) | `pipeline.py` — run with `python pipeline.py` |
 | **Replicate / Stability AI** (cloud API) | `request.json` + `example.sh` — curl to generate |
@@ -54,9 +52,10 @@ You: "Generate a Flux workflow with ControlNet"
    Model family? txt2img or inpaint? LoRAs? ControlNets?
      │
      ▼
-③ AI validates against 20 built-in rules
+③ AI validates against 23 built-in rules
    ⚠️ Flux has no negative prompt → auto-removed
    ⚠️ Inpaint must use VAEEncodeForInpaint → auto-fixed
+   ⚠️ InvokeAI node IDs must be UUID → enforced
      │
      ▼
 ④ AI renders IR to native platform format
@@ -198,12 +197,69 @@ Connect to your automation stack:
 
 ---
 
+## Example Workflows
+
+Ready-to-use workflows you can drag into the corresponding platform:
+
+| Example | Content | Platform |
+|---------|---------|----------|
+| `examples/sdxl_faceid_img2img/` | SDXL + IPAdapter FaceID + img2img | ComfyUI |
+| `examples/flux_txt2img/` | Flux.1-dev txt2img (DualCLIP + FluxGuidance) | ComfyUI |
+| `examples/sd15_inpaint/` | SD1.5 inpainting (VAEEncodeForInpaint) | ComfyUI |
+| `examples/animatediff_basic/` | AnimateDiff video generation (VHS_VideoCombine) | ComfyUI |
+
+Each example includes `workflow.json` + `workflow_api.json` + `dependencies.md` + `README.md`.
+
+---
+
+## Programmable Architecture (Developers)
+
+Beyond the YAML knowledge base, the project provides a Python programmable layer for integration into Agent, MCP Server, or Tool-calling systems:
+
+```python
+from core import WorkflowIR, ModelFamily, PipelineType, TargetPlatform, SamplingParams, LoraRef
+from adapters.base_adapter import AdapterRegistry
+
+ir = WorkflowIR(
+    model_family=ModelFamily.FLUX,
+    pipeline_type=PipelineType.TXT2IMG,
+    target_platform=TargetPlatform.COMFYUI,
+    prompt="a futuristic city at night",
+    sampling=SamplingParams.defaults_for(ModelFamily.FLUX),
+)
+
+ir.validate()                     # → validation errors
+ir.supports_negative_prompt()     # → False (Flux)
+output = AdapterRegistry.translate(ir, TargetPlatform.A1111)
+```
+
+```
+core/
+└── ir/
+    ├── parameter.py    ← Enums + parameter dataclasses
+    ├── node.py         ← IRNode / NodeConnection / port types
+    ├── workflow.py     ← WorkflowIR (validate, deps, cross-platform queries)
+    └── translator.py   ← PlatformTranslator abstract base class
+
+adapters/
+├── base_adapter.py     ← BaseAdapter + AdapterRegistry (unified interface)
+
+knowledge/
+├── build_index.py      ← Auto-scan YAML → .cache/index.json (gitignored)
+
+tests/
+├── validators/
+│   └── test_validation.py  ← Semantic + platform-specific auto-validation
+```
+
+---
+
 ## Knowledge Base Structure
 
 ```
 knowledge/
 ├── ir_schema.yaml              ← Universal language for describing workflows
-├── rules.yaml                   ← 20 rules (auto-corrects wrong configs)
+├── rules.yaml                   ← 23 rules (auto-corrects wrong configs)
 ├── models/                    ← Each model's quirks
 │   ├── sd15.yaml              ← 512px, 20 steps, dpmpp_2m
 │   ├── sdxl.yaml              ← 1024px, dual CLIP, refiner support
@@ -218,6 +274,7 @@ knowledge/
     ├── a1111.yaml             ← params.txt format, LoRA syntax
     ├── diffusers.yaml         ← pipeline.py templates
     ├── api.yaml              ← Replicate / Stability API schema
+    ├── invokeai.yaml          ← InvokeAI Node Editor (UUID/snake_case)
     └── prompt_only.yaml       ← Midjourney param engine
 ```
 
@@ -225,7 +282,11 @@ knowledge/
 
 ## Test Coverage
 
-12 test cases validated:
+13 test cases validated. Run with:
+
+```bash
+python3 tests/validators/test_validation.py
+```
 
 | Case | Platform | What It Tests |
 |------|---------|---------------|
@@ -241,6 +302,7 @@ knowledge/
 | TC010 | Stability | SD3 Ultra API request |
 | TC011 | ComfyUI | Multiple ControlNets chained (not parallel) |
 | TC012 | Diffusers | SDXL Base + Refiner two-stage |
+| TC013 | InvokeAI | SDXL txt2img (UUID IDs, snake_case types, edge format) |
 
 ---
 
