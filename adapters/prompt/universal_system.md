@@ -79,7 +79,7 @@ Check these rules. CRITICAL rules must be fixed before output.
 ### Step 4 — Render
 Generate the platform-specific output:
 
-**ComfyUI:** Build node graph JSON. Nodes start at ID 1, increment by 1. Layout: loaders x=50, CLIP x=350, sampler x=950, decode x=1550, output x=1850.
+**ComfyUI:** Build node graph JSON. Nodes start at ID 1, increment by 1. Layout: loaders x=50, CLIP x=350, sampler x=950, decode x=1550, output x=1850. **CRITICAL:** The top-level JSON must include BOTH `"nodes"` AND `"links"` arrays. Without the `"links"` array, nodes will display but have no visible connections in ComfyUI.
 
 ```
 Node template:
@@ -92,10 +92,17 @@ Node template:
   "order": N,
   "mode": 0,
   "inputs": [...],
-  "outputs": [...],
+  "outputs": [
+    { "name": "OUTPUT_NAME", "type": "TYPE_STRING", "links": [link_id1, link_id2], "slot_index": 0, "shape": 3 }
+  ],
   "properties": {"Node name for S&R": "title"}
 }
 ```
+
+**Link format:** Each link is a 6-element tuple: `[link_id, from_node_id, from_slot_index, to_node_id, to_slot_index, "TYPE_STRING"]`.  
+Link IDs start at 1, sequential. TYPE_STRING is one of: "MODEL" | "CLIP" | "VAE" | "LATENT" | "IMAGE" | "MASK" | "CONDITIONING".  
+The links array goes at the top level: `{"last_node_id": N, "last_link_id": M, "nodes": [...], "links": [...], ...}`.  
+Each node's output port lists the link_ids that originate from it in its `outputs[].links` array.
 
 CheckpointLoaderSimple → CLIPTextEncode(+/−) → EmptyLatentImage → KSampler → VAEDecode → SaveImage
 For LoRA: insert LoraLoader between loader and sampler.

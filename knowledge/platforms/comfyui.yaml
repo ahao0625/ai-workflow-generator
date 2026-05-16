@@ -50,10 +50,14 @@ layout:
 
 # ── WORKFLOW.JSON STRUCTURE / workflow.json结构 ────────────────
 workflow_json_structure:
-  root_key: "last_node_id"
-  root_value: "(INT: final node ID)"
-  extra_fields:
-    last_updated: "(TIMESTAMP)"
+  root_top_level:
+    last_node_id: "(INT: final node ID)"
+    last_link_id: "(INT: final link ID)"
+    nodes: "(ARRAY: node objects)"
+    links: "(ARRAY: link tuples, MUST be at top level alongside nodes)"
+    groups: "(ARRAY: optional group bounding boxes)"
+    config: "{}"
+    extra: "{}"
     version: 0.4
   node_object_format:
     id: "(INT)"
@@ -83,8 +87,18 @@ workflow_json_structure:
 # ── CONNECTION LINKS / 连接定义 ─────────────────────────────────
 connection_format:
   link_id: "(INT: sequential from 1)"
-  link_structure: "[from_node_id, from_slot_index, to_node_id, to_slot_index, link_id]"
-  type_code: |     # Input slot type codes / 输入槽类型代码
+  link_structure: "[link_id, from_node_id, from_slot_index, to_node_id, to_slot_index, type_string]"
+  type_string_note: >
+    The 6th element is the port TYPE as a STRING, NOT an integer code.
+    Use: "MODEL" | "CLIP" | "VAE" | "LATENT" | "IMAGE" | "MASK" | "CONDITIONING" | "CONTROL".
+    Each node output's "links" array lists the link_ids that originate from that port.
+    The links array goes at the top level of the workflow JSON, alongside "nodes".
+    /
+    第6个元素是端口类型字符串，不是整数代码。
+    使用: "MODEL" | "CLIP" | "VAE" | "LATENT" | "IMAGE" | "MASK" | "CONDITIONING" | "CONTROL"。
+    每个节点outputs中的"links"数组列出从该端口发出的link_id。
+    links数组位于workflow JSON顶层，与"nodes"并列。
+  type_code: |     # Input slot type codes for node "inputs" field / 节点inputs字段中的类型码
     WIDGET_CONSTANT: -1
     INT: 0
     FLOAT: 1

@@ -184,6 +184,17 @@ Load node definitions from `knowledge/nodes/` (ComfyUI targets only).
 Node ID assignment (ComfyUI): start at `1`, increment by `1`, topological order (sources first).  
 Layout coordinates: `x` increases left→right in steps of `300`, `y` groups by layer.
 
+**⚠️ CRITICAL for ComfyUI:** The workflow JSON MUST include a top-level `"links"` array alongside `"nodes"`. Without it, nodes display but have no visible connections in ComfyUI.
+
+Each link is a 6-element tuple:
+```
+[link_id, from_node_id, from_slot_index, to_node_id, to_slot_index, "TYPE_STRING"]
+```
+- link_id starts at 1, sequential / link_id从1开始，顺序递增
+- TYPE_STRING is: "MODEL" | "CLIP" | "VAE" | "LATENT" | "IMAGE" | "MASK" | "CONDITIONING"
+- Node outputs must list their originating link_ids in `outputs[].links` arrays
+- Top-level keys: `last_node_id`, `last_link_id`, `nodes`, `links`, `groups`, `config`, `version`
+
 ---
 
 ## Step 5 — Output Assembly / 输出组装
