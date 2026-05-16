@@ -244,3 +244,35 @@ rules:
       Warn: "Flux workflow generation is not fully supported in InvokeAI v4 Node Editor.
       Consider using InvokeAI queue/generate tab instead, or switch to ComfyUI for Flux.
       / Flux工作流在InvokeAI v4节点编辑器中不完全支持，建议使用队列/生成标签页或切换到ComfyUI。"
+
+  # ── INVOKEAI SPECIFIC RULES / InvokeAI专属规则 ────────────────────
+
+  R21:
+    id: R21
+    severity: CRITICAL
+    name: "Flux not supported in InvokeAI Node Editor / Flux不支持InvokeAI节点编辑器"
+    condition: target_platform == "invokeai" AND model_family == "flux"
+    action: >
+      Error: Flux.1 is not supported in the InvokeAI Node Editor as of v4.x.
+      Use InvokeAI's standard queue/generate tab for Flux models instead.
+      Flux.1不支持InvokeAI节点编辑器，请使用标准生成队列页面。
+
+  R22:
+    id: R22
+    severity: CRITICAL
+    name: "InvokeAI node IDs must be UUID strings / InvokeAI节点ID必须为UUID字符串"
+    condition: target_platform == "invokeai" AND any node ID is an integer
+    action: >
+      Error: InvokeAI Node Editor requires UUID string node IDs
+      (e.g. "node-0001-0000-0000-000000000001"), not ComfyUI-style integers.
+      InvokeAI节点ID必须是UUID字符串，不能使用ComfyUI风格的整数ID。
+
+  R23:
+    id: R23
+    severity: CRITICAL
+    name: "InvokeAI edges must use field names not slot indices / InvokeAI连线必须用字段名"
+    condition: target_platform == "invokeai" AND edges use integer slot indices
+    action: >
+      Error: InvokeAI edges use explicit {node_id, field} source/destination format.
+      ComfyUI-style [node_id, slot_index] links are not valid in InvokeAI.
+      InvokeAI连线格式为 {node_id, field}，不能使用ComfyUI的 [node_id, slot_index] 格式。

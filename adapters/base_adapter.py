@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
+import threading
 
 from core.ir.workflow import WorkflowIR
 from core.ir.translator import PlatformTranslator
@@ -72,22 +73,27 @@ class BaseAdapter(ABC):
 
 class AdapterRegistry:
     _adapters: Dict[TargetPlatform, BaseAdapter] = {}
+    _lock: threading.Lock = threading.Lock()
 
     @classmethod
     def register(cls, adapter: BaseAdapter):
-        cls._adapters[adapter.platform] = adapter
+        with cls._lock:
+            cls._adapters[adapter.platform] = adapter
 
     @classmethod
     def get(cls, platform: TargetPlatform) -> Optional[BaseAdapter]:
-        return cls._adapters.get(platform)
+        with cls._lock:
+            return cls._adapters.get(platform)
 
     @classmethod
     def list_all(cls) -> List[BaseAdapter]:
-        return list(cls._adapters.values())
+        with cls._lock:
+            return list(cls._adapters.values())
 
     @classmethod
     def find_adapter(cls, model_family: ModelFamily, pipeline_type: PipelineType) -> List[BaseAdapter]:
-        return [a for a in cls._adapters.values() if a.supports(model_family, pipeline_type)]
+        with cls._lock:
+            return [a for a in cls._adapters.values() if a.supports(model_family, pipeline_type)]
 
     @classmethod
     def translate(cls, ir: WorkflowIR, target: TargetPlatform) -> Optional[Dict[str, Any]]:

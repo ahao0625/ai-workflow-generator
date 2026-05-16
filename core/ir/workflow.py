@@ -70,7 +70,17 @@ class WorkflowIR:
             },
             "output_format": self.output_format.value,
             "loras": [{"name": l.name, "weight_model": l.weight_model, "weight_clip": l.weight_clip} for l in self.loras],
-            "controlnets": len(self.controlnets),
+            "controlnets": [
+                {
+                    "model": c.model,
+                    "preprocessor": c.preprocessor,
+                    "strength": c.strength,
+                    "start_percent": c.start_percent,
+                    "end_percent": c.end_percent,
+                    "input_image": c.input_image,
+                }
+                for c in self.controlnets
+            ],
         }
 
     def uses_dual_clip(self) -> bool:
@@ -101,17 +111,28 @@ class WorkflowIR:
         if self.is_video() and self.model_family != ModelFamily.VIDEO:
             errors.append(f"Video pipeline requires model_family=video, got {self.model_family.value}")
         if not self.supports_negative_prompt() and self.negative_prompt:
-            errors.append(f"{self.model_family.value} does not support negative prompt")
+            errors.append(f"{self.model_family.value} does not support negative prompt (R01)")
+        # R03: Flux schnell distilled for ≤8 steps
+        if (
+            self.model_family == ModelFamily.FLUX
+            and self.model_name
+            and "schnell" in self.model_name.lower()
+            and self.sampling.steps > 8
+        ):
+            errors.append(
+                f"flux1-schnell is distilled for 1–4 steps; "
+                f"current steps={self.sampling.steps} wastes compute (R03)"
+            )
         if self.target_platform == TargetPlatform.COMFYUI:
             if not self._has_terminal_node():
-                errors.append("ComfyUI workflow must have a terminal output node (SaveImage/PreviewImage/VHS_VideoCombine)")
+                errors.append("ComfyUI workflow must have a terminal output node (SaveImage/PreviewImage/VHS_VideoCombine) (R08)")
             if not self._nodes_have_unique_ids():
-                errors.append("ComfyUI nodes must have unique IDs")
+                errors.append("ComfyUI nodes must have unique IDs (R09)")
         if self.target_platform == TargetPlatform.INVOKEAI:
             if self.model_family == ModelFamily.FLUX:
-                errors.append("Flux is not supported in InvokeAI Node Editor (R23)")
+                errors.append("Flux is not supported in InvokeAI Node Editor (R21)")
             if self._has_integer_node_ids():
-                errors.append("InvokeAI node IDs must be UUID strings, not integers (R21)")
+                errors.append("InvokeAI node IDs must be UUID strings, not integers (R22)")
         if self.target_platform == TargetPlatform.A1111:
             if self.sampling.width % 8 != 0 or self.sampling.height % 8 != 0:
                 errors.append("A1111 dimensions must be divisible by 8 (R17)")

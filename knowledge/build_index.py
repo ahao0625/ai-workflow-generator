@@ -3,47 +3,31 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-
-KNOWLEDGE_DIR = Path(__file__).resolve().parent
-CACHE_DIR = KNOWLEDGE_DIR / ".cache"
-CACHE_FILE = CACHE_DIR / "index.json"
-
-
-def _load_yaml_safe(yaml_path: Path) -> Dict[str, Any]:
-    contents: Dict[str, Any] = {}
-    current_key: Optional[str] = None
-    current_indent = 0
-    list_buffer: List[str] = []
-
-    try:
-        with open(yaml_path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-    except FileNotFoundError:
+try:
+    import yaml as _yaml
+    def _load_yaml_safe(yaml_path: Path) -> Dict[str, Any]:
+        """Load a YAML file safely using PyYAML."""
+        try:
+            with open(yaml_path, "r", encoding="utf-8") as f:
+                result = _yaml.safe_load(f.read())
+                return result if isinstance(result, dict) else {}
+        except (_yaml.YAMLError, FileNotFoundError):
+            return {}
+except ImportError:
+    # Fallback minimal parser if PyYAML is unavailable
+    def _load_yaml_safe(yaml_path: Path) -> Dict[str, Any]:  # type: ignore[misc]
+        """Fallback YAML loader (top-level keys only). Install PyYAML for full support."""
+        contents: Dict[str, Any] = {}
+        try:
+            with open(yaml_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.rstrip()
+                    if line and not line.startswith("#") and ":" in line and not line.startswith(" "):
+                        key, _, val = line.partition(":")
+                        contents[key.strip()] = val.strip().strip('"').strip("'")
+        except FileNotFoundError:
+            pass
         return contents
-
-    for line in lines:
-        stripped = line.rstrip()
-        if not stripped or stripped.startswith("#"):
-            continue
-        indent = len(line) - len(line.lstrip())
-        if stripped.endswith(":") and not stripped.startswith("-"):
-            key = stripped.rstrip(":").strip()
-            if key.startswith("&") or key.startswith("*"):
-                continue
-            contents[key] = ""
-            current_key = key
-            current_indent = indent
-        elif current_key and indent > current_indent:
-            val = stripped.lstrip("- ").strip().strip('"').strip("'")
-            if val:
-                if current_key not in contents or not isinstance(contents[current_key], list):
-                    if isinstance(contents.get(current_key), str) and contents.get(current_key) == "":
-                        contents[current_key] = []
-                if isinstance(contents.get(current_key), list):
-                    contents[current_key].append(val)
-                else:
-                    contents[current_key] = val
-    return contents
 
 
 def build_model_index() -> Dict[str, Any]:

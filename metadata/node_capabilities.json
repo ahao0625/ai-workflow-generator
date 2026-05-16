@@ -1,0 +1,18 @@
+{
+  "KSampler": {
+    "inputs": [
+      "model",
+      "positive",
+      "negative",
+      "latent"
+    ],
+    "outputs": [
+      "latent"
+    ],
+    "compatible_models": [
+      "sd15",
+      "sdxl",
+      "flux"
+    ]
+  }
+}

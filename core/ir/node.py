@@ -27,16 +27,34 @@ class NodePort:
 @dataclass
 class NodeConnection:
     from_node_id: str
-    from_port: str
+    from_port: str        # port name, e.g. "MODEL"
     to_node_id: str
-    to_port: str
+    to_port: str          # port name, e.g. "model"
+    from_slot: int = 0    # output slot index on source node
+    to_slot: int = 0      # input slot index on destination node
+    port_type: str = ""   # ComfyUI type string, e.g. "MODEL", "LATENT"
 
-    def as_comfyui_link(self, node_id_map: Dict[str, int]) -> Tuple[int, int, int, int, str]:
+    def as_comfyui_link(
+        self,
+        link_id: int,
+        node_id_map: Dict[str, int],
+    ) -> Tuple[int, int, int, int, int, str]:
+        """Return a ComfyUI-format link tuple.
+
+        ComfyUI links array format:
+            [link_id, from_node_id, from_slot_index, to_node_id, to_slot_index, type_string]
+
+        Args:
+            link_id:      Global auto-incrementing link ID (starts at 1).
+            node_id_map:  Maps internal string IDs to ComfyUI integer node IDs.
+        """
         return (
+            link_id,
             node_id_map[self.from_node_id],
-            self.from_port,
+            self.from_slot,
             node_id_map[self.to_node_id],
-            self.to_port,
+            self.to_slot,
+            self.port_type or self.from_port,
         )
 
 

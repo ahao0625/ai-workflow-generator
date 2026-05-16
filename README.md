@@ -361,18 +361,35 @@ A: 能。支持 AnimateDiff（SD1.5/SDXL 动画化）、SVD（图生视频）、
 
 ---
 
-## ☕ 打赏支持
-
-如果这个项目帮到了你，欢迎请我喝杯咖啡 ☕
-
-| 微信 | 支付宝 |
-|:------:|:------:|
-| <img src="assets/wechat-qr.png" width="200" alt="微信赞赏码"/> | <img src="assets/alipay-qr.png" width="200" alt="支付宝收款码"/> |
-
-每一份支持都是持续更新和维护的动力 🌟
-
----
-
 ## License
 
 MIT License — 免费商用，欢迎 fork 和 PR。
+
+
+# New Engineering Features
+
+## Added Template Engine
+
+This version introduces:
+
+- Template-based workflow generation
+- Module composition system
+- Workflow validator
+- Parameter injector
+- Schema registry
+- Capability registry
+
+## Architecture
+
+AI now focuses on:
+
+- prompts
+- parameters
+- workflow intent
+
+Program logic handles:
+
+- topology
+- links
+- schema
+- graph composition

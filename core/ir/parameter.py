@@ -153,6 +153,11 @@ class SamplingParams:
             ModelFamily.FLUX:     dict(width=1024, height=1024, steps=20, cfg=1.0, sampler_name=SamplerName.EULER, scheduler=Scheduler.SIMPLE),
             ModelFamily.SD3:      dict(width=1024, height=1024, steps=28, cfg=4.5, sampler_name=SamplerName.DPMPP_2M, scheduler=Scheduler.SGM_UNIFORM),
             ModelFamily.CASCADE:  dict(width=1024, height=1024, steps=20, cfg=4.0, sampler_name=SamplerName.EULER, scheduler=Scheduler.KARRAS),
-            ModelFamily.VIDEO:    dict(width=512, height=512, steps=20, cfg=7.0, sampler_name=SamplerName.DPMPP_2M, scheduler=Scheduler.KARRAS),
+            ModelFamily.VIDEO:    dict(width=832, height=480, steps=20, cfg=7.0, sampler_name=SamplerName.DPMPP_2M, scheduler=Scheduler.KARRAS),
+            # NOTE: VIDEO resolution varies by model:
+            #   AnimateDiff SD1.5 = 512x512, SDXL = 1024x1024
+            #   Wan2.1 = 832x480 (landscape) or 480x832 (portrait)
+            #   HunyuanVideo = 848x480, SVD = 1024x576
+            # 832x480 is a safe landscape default; override per-model after family detection.
         }
         return cls(**defaults.get(family, {}))

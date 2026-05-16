@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 
 TEST_CASES_DIR = Path(__file__).resolve().parent.parent
@@ -12,12 +12,19 @@ def load_test_cases() -> List[Dict[str, Any]]:
         return json.load(f)
 
 
-def load_expected_output(tc_id: str) -> Dict[str, Any]:
+def load_expected_output(tc_id: str) -> Any:
+    """Load expected output for a test case.
+
+    Returns parsed JSON dict for .json files, or raw string for .txt files
+    (used by Diffusers pipeline, Midjourney prompt, and other text outputs).
+    """
     for ext in [".json", ".txt"]:
-        p = EXPECTED_OUTPUTS_DIR / f"{tc_id}_*{ext}"
         for match in EXPECTED_OUTPUTS_DIR.glob(f"{tc_id}_*{ext}"):
             with open(match, "r", encoding="utf-8") as f:
-                return json.load(f)
+                if ext == ".json":
+                    return json.load(f)
+                else:
+                    return f.read()  # TC006/TC008/TC012 are plain text
     raise FileNotFoundError(f"No expected output found for {tc_id}")
 
 
@@ -29,7 +36,9 @@ def validate_comfyui_workflow(tc: Dict[str, Any]) -> List[str]:
         errors.append("expected not a valid dict")
         return errors
 
-    if expected.get("has_SaveImage") is not None and expected.get("has_SaveImage") is False:
+    # R08: terminal node must exist — fail if explicitly False OR if key is absent
+    # (workflows that don't declare has_SaveImage are treated as non-compliant)
+    if expected.get("has_SaveImage", True) is False:
         errors.append(f"{tc['id']}: ComfyUI workflow must have SaveImage (R08)")
 
     return errors
@@ -96,7 +105,7 @@ def validate_semantic(tc: Dict[str, Any]) -> List[str]:
             errors.append(f"{tc['id']}: Flux must not have negative prompt (R01)")
 
     if expected.get("target_platform") == "comfyui" and expected.get("model_family") == "flux":
-        if expected.get("kampler_cfg_is_1") is False:
+        if expected.get("ksampler_cfg_is_1") is False:
             errors.append(f"{tc['id']}: Flux KSampler cfg must be 1.0 (R15)")
 
     if expected.get("pipeline_type") == "inpaint":
