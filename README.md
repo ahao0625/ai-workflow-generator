@@ -87,138 +87,43 @@
 
 ---
 
-## 配置方式（总有一种适合你）
+## 🚀 最简单的使用方式（99% 的人选这个）
 
-### 方式一：Claude（最推荐 ✅）
+**不需要复杂配置！** 直接把说明粘贴给任意支持长上下文的 AI：
 
-适合日常随手用，不折腾。
+### 步骤：
 
-**步骤：**
+1. **下载项目压缩包**（从上面的下载链接）并解压
+2. **打开你常用的 AI**（Claude / ChatGPT / Kimi / 通义 / DeepSeek 等）
+3. **在对话框中粘贴** [`SKILL.md`](SKILL.md) 的全部内容（或 [`adapters/prompt/universal_system.md`](adapters/prompt/universal_system.md)，更精简）
+4. **开始聊天**，比如：
+   - "帮我生成一个 SDXL 文生图工作流"
+   - "生成一个 Flux 工作流，加 ControlNet Canny"
+   - "创建一个带 LoRA 的 ComfyUI Inpaint 工作流"
 
-1. 打开 [claude.ai](https://claude.ai)，登录
-2. 点击左下角 **Projects → Create Project**，起名"AI绘图助手"
-3. 在 Project Instructions 里粘贴 [`adapters/prompt/claude_system.md`](adapters/prompt/claude_system.md) 的内容
-4. 把整个 `knowledge/` 文件夹**拖进去**（或上传）
-5. 开聊，比如："生成一个 SDXL 文生图工作流"
-
-> 💡 Claude 有 200K context，模型族知识和节点库全部装进去都没问题。
-
----
-
-### 方式二：ChatGPT（适合有 ChatGPT Plus 的人）
-
-**步骤：**
-
-1. 打开 [chat.openai.com](https://chat.openai.com)，点 **Create a GPT**
-2. **Instructions** 标签：粘贴 [`adapters/prompt/chatgpt_instructions.md`](adapters/prompt/chatgpt_instructions.md) 内容
-3. **Knowledge** 标签：上传整个 `knowledge/` 文件夹
-4. **Capabilities** 标签：勾选 **Code Interpreter**（让它帮你写文件）和 **Web Browsing**（查最新模型信息）
-5. 起个名字，比如"AI绘图工作流助手"，保存
-
-> 💡 Code Interpreter 开启后，它会直接把生成的文件写到可下载状态，不用你手动复制粘贴。
+就这么简单！
 
 ---
 
-### 方式三：Kimi / 秘塔搜索 / 通义千问 / 文心一言（免费党）
+## 🛠️ 高级配置（开发者或特定平台用户）
 
-这些平台支持**上传文件 + System Prompt**，配置最简单：
+### 如果你有特定平台需求：
 
-1. 在对应平台创建一个"助手"或"智能体"
-2. 把 [`adapters/prompt/universal_system.md`](adapters/prompt/universal_system.md) 的内容粘贴进去
-3. 上传 `knowledge/` 文件夹
-4. 开始用
+| 平台 | 对应的 System Prompt 文件 |
+|------|---------------------------|
+| Claude | [`adapters/prompt/claude_system.md`](adapters/prompt/claude_system.md) |
+| ChatGPT | [`adapters/prompt/chatgpt_instructions.md`](adapters/prompt/chatgpt_instructions.md) |
+| 通用（所有平台） | [`adapters/prompt/universal_system.md`](adapters/prompt/universal_system.md) |
 
-> 💡 通义、秘塔、Kimi 都支持长上下文，Diffusers 的 pipeline.py 模板（几百行）都能完整塞进去。
+### 开发者集成方式：
 
----
+- **LangChain**: [`adapters/langchain/`](adapters/langchain/)
+- **Dify**: [`adapters/dify/`](adapters/dify/)
+- **Coze / 扣子**: [`adapters/coze/`](adapters/coze/)
+- **Open WebUI**: [`adapters/open_webui/`](adapters/open_webui/)
+- **Semantic Kernel**: [`adapters/semantic_kernel/`](adapters/semantic_kernel/)
 
-### 方式四：本地部署（Ollama / LM Studio / Jan）
-
-本地模型也能用，只是输出速度会稍慢：
-
-1. 把 `SKILL.md` 内容作为 System Prompt 传入
-2. 上传 `knowledge/` 文件夹
-3. 对话即可
-
-> ⚠️ 本地模型建议用 70B 以上参数量的模型（如 Qwen2.5-72B、Llama3.1-70B），小模型对多知识文件的理解能力有限。
-
----
-
-### 方式五：LangChain（开发者集成）
-
-把技能封装成 LangChain Tool，在自己的 AI 应用里调用：
-
-```python
-# adapters/langchain/workflow_generator_tool.py
-from langchain.tools import BaseTool
-
-tool = WorkflowGeneratorTool(
-    skill_content=open("SKILL.md").read()
-)
-
-# 在 Agent 里使用
-agent = initialize_agent([tool], llm, agent="react-docstore")
-agent.run("生成一个 SDXL 工作流，加两个 LoRA")
-```
-
----
-
-### 方式六：Dify（低代码 AI 应用平台）
-
-在 Dify 里直接导入为自定义工具：
-
-1. Dify → **工具 → 自定义工具 → 导入**
-2. 上传 [`adapters/dify/tool_manifest.yaml`](adapters/dify/tool_manifest.yaml)
-3. 在 Workflow 里拖入"AI 工作流生成器"节点，输入自然语言描述
-4. 输出直接拿到 workflow JSON / Python 代码
-
----
-
-### 方式七：Coze / 扣子（国内 bot 平台）
-
-在 Coze 里发布为插件：
-
-1. Coze → **插件 → 创建插件**
-2. 导入 [`adapters/coze/plugin_manifest.json`](adapters/coze/plugin_manifest.json)
-3. 在 Bot 工作流里使用"生成工作流"节点
-
----
-
-### 方式八：Open WebUI（本地 Web UI for Ollama）
-
-Open WebUI 支持自定义 Tools：
-
-1. 把 [`adapters/open_webui/skill_function.py`](adapters/open_webui/skill_function.py) 放到 `~/.open-webui/tools/`
-2. 在 Admin → Tools 里启用
-3. 对话中提到工作流时，AI 会自动调用这个工具
-
----
-
-### 方式九：微软 Semantic Kernel（.NET 生态）
-
-在 .NET 项目里注册为 SK Plugin：
-
-```csharp
-// adapters/semantic_kernel/WorkflowPlugin.cs
-var kernel = Kernel.CreateBuilder()
-    .AddOpenAIChatCompletion(model, apiKey)
-    .AddPlugin<WorkflowPlugin>("WorkflowGenerator");
-
-var result = await kernel.InvokeAsync(
-    "WorkflowGenerator_GenWorkflow",
-    new() { ["description"] = "生成 SDXL 工作流，加两个 LoRA" }
-);
-```
-
----
-
-### 方式十：Zapier / Make（自动化工作流）
-
-配合 AI Actions，把工作流生成接进自动化流程：
-
-1. 在 Zapier Create（MCP 或 AI Actions）里配置
-2. 触发条件：收到特定格式的文本
-3. 动作：调用 AI 生成工作流 → 发送邮件 / Slack / 保存到 Notion
+这些是为开发者准备的，普通用户不需要看。
 
 ---
 
