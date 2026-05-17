@@ -28,6 +28,24 @@
 
 ---
 
+## 🚀 最简单的使用方式（99% 的人选这个）
+
+**不需要复杂配置！** 直接把说明粘贴给任意支持长上下文的 AI：
+
+### 步骤：
+
+1. **下载项目压缩包**（从上面的下载链接）并解压
+2. **打开你常用的 AI**（Claude / ChatGPT / Kimi / 通义 / DeepSeek 等）
+3. **在对话框中粘贴** [`SKILL.md`](SKILL.md) 的全部内容（或 [`adapters/prompt/universal_system.md`](adapters/prompt/universal_system.md)，更精简）
+4. **开始聊天**，比如：
+   - "帮我生成一个 SDXL 文生图工作流"
+   - "生成一个 Flux 工作流，加 ControlNet Canny"
+   - "创建一个带 LoRA 的 ComfyUI Inpaint 工作流"
+
+就这么简单！
+
+---
+
 ## ✨ v1.3 新特性（模板引擎升级）
 
 **问题解决：** ComfyUI 节点断线、AI 幻觉生成拓扑结构
@@ -84,24 +102,6 @@
    · dependencies.md（需要下载什么模型）
    · 使用说明（怎么加载，遇到问题怎么办）
 ```
-
----
-
-## 🚀 最简单的使用方式（99% 的人选这个）
-
-**不需要复杂配置！** 直接把说明粘贴给任意支持长上下文的 AI：
-
-### 步骤：
-
-1. **下载项目压缩包**（从上面的下载链接）并解压
-2. **打开你常用的 AI**（Claude / ChatGPT / Kimi / 通义 / DeepSeek 等）
-3. **在对话框中粘贴** [`SKILL.md`](SKILL.md) 的全部内容（或 [`adapters/prompt/universal_system.md`](adapters/prompt/universal_system.md)，更精简）
-4. **开始聊天**，比如：
-   - "帮我生成一个 SDXL 文生图工作流"
-   - "生成一个 Flux 工作流，加 ControlNet Canny"
-   - "创建一个带 LoRA 的 ComfyUI Inpaint 工作流"
-
-就这么简单！
 
 ---
 
