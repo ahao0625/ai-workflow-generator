@@ -22,7 +22,7 @@
 
 | 方式 | 说明 |
 |------|------|
-| **📦 一键下载（推荐）** | [ai-workflow-generator-v1.2.zip](https://github.com/ahao0625/ai-workflow-generator/releases/download/v1.2.0/ai-workflow-generator-v1.2.zip) |
+| **📦 一键下载（推荐）** | [ai-workflow-generator-v1.4.zip](https://github.com/ahao0625/ai-workflow-generator/releases/download/v1.4.0/ai-workflow-generator-v1.4.zip) |
 | **Git Clone** | `git clone https://github.com/ahao0625/ai-workflow-generator.git` |
 | **Release 页面** | [GitHub Releases](https://github.com/ahao0625/ai-workflow-generator/releases) 查看历史版本 |
 
