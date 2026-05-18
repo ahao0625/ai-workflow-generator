@@ -1,13 +1,107 @@
 {
+  "CheckpointLoaderSimple": {
+    "comfyui_0.3": ["ckpt_name"]
+  },
+  "UNETLoader": {
+    "comfyui_0.3": ["unet_name", "weight_dtype"]
+  },
+  "UnetLoaderGGUF": {
+    "comfyui_0.3": ["unet_name"]
+  },
+  "DualCLIPLoader": {
+    "comfyui_0.3": ["clip_name1", "clip_name2", "type"]
+  },
+  "TripleCLIPLoader": {
+    "comfyui_0.3": ["clip_name1", "clip_name2", "clip_name3"]
+  },
+  "CLIPLoader": {
+    "comfyui_0.3": ["clip_name", "type"]
+  },
+  "CLIPLoaderGGUF": {
+    "comfyui_0.3": ["clip_name"]
+  },
+  "VAELoader": {
+    "comfyui_0.3": ["vae_name"]
+  },
+  "CLIPTextEncode": {
+    "comfyui_0.3": ["text"]
+  },
+  "CLIPTextEncodeSDXL": {
+    "comfyui_0.3": ["text_g", "text_l", "width", "height", "target_width", "target_height", "crop_w", "crop_h"]
+  },
+  "CLIPTextEncodeFlux": {
+    "comfyui_0.3": ["text", "width", "height"]
+  },
+  "CLIPTextEncodeSD3": {
+    "comfyui_0.3": ["text_g", "text_l", "text_t5", "width", "height", "target_width", "target_height", "crop_w", "crop_h"]
+  },
+  "FluxGuidance": {
+    "comfyui_0.3": ["guidance"]
+  },
+  "EmptyLatentImage": {
+    "comfyui_0.3": ["width", "height", "batch_size"]
+  },
+  "EmptySD3LatentImage": {
+    "comfyui_0.3": ["width", "height", "batch_size"]
+  },
   "KSampler": {
-    "comfyui_0.3": [
-      "seed",
-      "control_after_generate",
-      "steps",
-      "cfg",
-      "sampler_name",
-      "scheduler",
-      "denoise"
-    ]
+    "comfyui_0.3": ["seed", "control_after_generate", "steps", "cfg", "sampler_name", "scheduler", "denoise"]
+  },
+  "KSamplerAdvanced": {
+    "comfyui_0.3": ["seed", "control_after_generate", "steps", "cfg", "sampler_name", "scheduler", "denoise", "start_at_step", "end_at_step", "return_with_leftover_noise"]
+  },
+  "VAEDecode": {
+    "comfyui_0.3": []
+  },
+  "VAEEncode": {
+    "comfyui_0.3": []
+  },
+  "VAEEncodeForInpaint": {
+    "comfyui_0.3": ["grow_mask_by"]
+  },
+  "LoraLoader": {
+    "comfyui_0.3": ["lora_name", "strength_model", "strength_clip"]
+  },
+  "ControlNetLoader": {
+    "comfyui_0.3": ["control_net_name"]
+  },
+  "ControlNetApplyAdvanced": {
+    "comfyui_0.3": ["strength", "start_percent", "end_percent"]
+  },
+  "SaveImage": {
+    "comfyui_0.3": ["filename_prefix"]
+  },
+  "PreviewImage": {
+    "comfyui_0.3": ["filename_prefix"]
+  },
+  "LoadImage": {
+    "comfyui_0.3": ["image"]
+  },
+  "IPAdapterModelLoader": {
+    "comfyui_0.3": ["ipadapter_file"]
+  },
+  "CLIPVisionLoader": {
+    "comfyui_0.3": ["clip_name"]
+  },
+  "IPAdapterApply": {
+    "comfyui_0.3": ["weight", "weight_type", "combine_embeds"]
+  },
+  "VHS_VideoCombine": {
+    "comfyui_0.3": ["frame_rate", "loop_count", "filename_prefix", "format", "pix_fmt", "crf", "save_metadata", "pingpong"]
+  },
+  "SaveAnimatedWEBP": {
+    "comfyui_0.3": ["filename_prefix", "fps", "lossless", "quality", "method"]
+  },
+  "LoadAnimateDiffModel": {
+    "comfyui_0.3": ["motion_module"]
+  },
+  "AnimateDiffLoaderWithContext": {
+    "comfyui_0.3": ["context_length", "context_stride", "context_overlap"]
+  },
+  "UpscaleModelLoader": {
+    "comfyui_0.3": ["model_name"]
+  },
+  "ImageUpscaleWithModel": {
+    "comfyui_0.3": []
   }
 }

@@ -1,4 +1,34 @@
 {
   "name": "lora_slot",
-  "description": "Composable LoRA module"
+  "description": "LoRA module — inserts LoraLoader nodes between model loader and KSampler, threading both MODEL and CLIP",
+  "insert_after": "model_loader",
+  "insert_before": "ksampler",
+  "node_template": {
+    "type": "LoraLoader",
+    "pos": [650, 580],
+    "size": {"0": 315, "1": 82},
+    "flags": {},
+    "order": 0,
+    "mode": 0,
+    "inputs": [
+      {"name": "model", "type": "MODEL", "link": null},
+      {"name": "clip", "type": "CLIP", "link": null}
+    ],
+    "outputs": [
+      {"name": "MODEL", "type": "MODEL", "links": [], "slot_index": 0, "shape": 3},
+      {"name": "CLIP", "type": "CLIP", "links": [], "slot_index": 1, "shape": 3}
+    ],
+    "properties": {"Node name for S&R": "LoRA {{lora_name}}"},
+    "widgets_values": ["{{lora_name}}.safetensors", "{{weight_model}}", "{{weight_clip}}"]
+  },
+  "wiring": {
+    "inputs": {
+      "model": {"from": "prev_model"},
+      "clip": {"from": "prev_clip"}
+    },
+    "outputs": {
+      "MODEL": {"to": "next_model"},
+      "CLIP": {"to": "next_clip"}
+    }
+  }
 }

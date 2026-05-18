@@ -1,7 +1,7 @@
 {
   "version": 0.4,
-  "name": "sdxl_txt2img",
-  "description": "SDXL txt2img base template with placeholder markers for parameter injection",
+  "name": "sd15_txt2img",
+  "description": "SD1.5 txt2img base template — single CLIP, 4ch latent",
   "last_node_id": 7,
   "last_link_id": 8,
   "nodes": [
@@ -24,9 +24,9 @@
     },
     {
       "id": 2,
-      "type": "CLIPTextEncodeSDXL",
+      "type": "CLIPTextEncode",
       "pos": [350, 100],
-      "size": {"0": 400, "1": 200},
+      "size": {"0": 400, "1": 120},
       "flags": {},
       "order": 1,
       "mode": 0,
@@ -37,13 +37,13 @@
         {"name": "CONDITIONING", "type": "CONDITIONING", "links": [4], "slot_index": 0, "shape": 3}
       ],
       "properties": {"Node name for S&R": "Positive Prompt"},
-      "widgets_values": ["{{positive_prompt}}", "{{width}}", "{{height}}", "{{width}}", "{{height}}", 0, 0]
+      "widgets_values": ["{{positive_prompt}}"]
     },
     {
       "id": 3,
-      "type": "CLIPTextEncodeSDXL",
-      "pos": [350, 340],
-      "size": {"0": 400, "1": 200},
+      "type": "CLIPTextEncode",
+      "pos": [350, 260],
+      "size": {"0": 400, "1": 120},
       "flags": {},
       "order": 2,
       "mode": 0,
@@ -54,12 +54,12 @@
         {"name": "CONDITIONING", "type": "CONDITIONING", "links": [5], "slot_index": 0, "shape": 3}
       ],
       "properties": {"Node name for S&R": "Negative Prompt"},
-      "widgets_values": ["{{negative_prompt}}", "{{width}}", "{{height}}", "{{width}}", "{{height}}", 0, 0]
+      "widgets_values": ["{{negative_prompt}}"]
     },
     {
       "id": 4,
       "type": "EmptyLatentImage",
-      "pos": [350, 580],
+      "pos": [350, 420],
       "size": {"0": 315, "1": 106},
       "flags": {},
       "order": 3,

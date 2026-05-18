@@ -130,9 +130,9 @@ class WorkflowIR:
                 errors.append("ComfyUI nodes must have unique IDs (R09)")
         if self.target_platform == TargetPlatform.INVOKEAI:
             if self.model_family == ModelFamily.FLUX:
-                errors.append("Flux is not supported in InvokeAI Node Editor (R21)")
+                errors.append("Flux is not supported in InvokeAI Node Editor (R24)")
             if self._has_integer_node_ids():
-                errors.append("InvokeAI node IDs must be UUID strings, not integers (R22)")
+                errors.append("InvokeAI node IDs must be UUID strings, not integers (R21)")
         if self.target_platform == TargetPlatform.A1111:
             if self.sampling.width % 8 != 0 or self.sampling.height % 8 != 0:
                 errors.append("A1111 dimensions must be divisible by 8 (R17)")

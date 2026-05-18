@@ -80,7 +80,7 @@ def validate_invokeai_workflow(tc: Dict[str, Any]) -> List[str]:
 
     if expected.get("edges_use_source_destination_format"):
         if expected.get("no_comfyui_style_link_numbers") is False:
-            errors.append(f"{tc['id']}: InvokeAI edges using ComfyUI-style link numbers (R22)")
+            errors.append(f"{tc['id']}: InvokeAI edges using ComfyUI-style link numbers (R23)")
 
     return errors
 

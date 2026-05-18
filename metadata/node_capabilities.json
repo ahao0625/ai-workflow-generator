@@ -1,18 +1,172 @@
 {
+  "CheckpointLoaderSimple": {
+    "inputs": [],
+    "outputs": ["MODEL", "CLIP", "VAE"],
+    "compatible_models": ["sd15", "sdxl", "sdxl_turbo", "video"]
+  },
+  "UNETLoader": {
+    "inputs": [],
+    "outputs": ["MODEL"],
+    "compatible_models": ["flux", "sd3"]
+  },
+  "DualCLIPLoader": {
+    "inputs": [],
+    "outputs": ["CLIP"],
+    "compatible_models": ["flux"]
+  },
+  "TripleCLIPLoader": {
+    "inputs": [],
+    "outputs": ["CLIP"],
+    "compatible_models": ["sd3"]
+  },
+  "VAELoader": {
+    "inputs": [],
+    "outputs": ["VAE"],
+    "compatible_models": ["flux", "sd3"]
+  },
+  "CLIPTextEncode": {
+    "inputs": ["CLIP"],
+    "outputs": ["CONDITIONING"],
+    "compatible_models": ["sd15", "video"]
+  },
+  "CLIPTextEncodeSDXL": {
+    "inputs": ["CLIP"],
+    "outputs": ["CONDITIONING"],
+    "compatible_models": ["sdxl", "sdxl_turbo"]
+  },
+  "CLIPTextEncodeFlux": {
+    "inputs": ["CLIP"],
+    "outputs": ["CONDITIONING"],
+    "compatible_models": ["flux"]
+  },
+  "CLIPTextEncodeSD3": {
+    "inputs": ["CLIP"],
+    "outputs": ["CONDITIONING"],
+    "compatible_models": ["sd3"]
+  },
+  "FluxGuidance": {
+    "inputs": ["CONDITIONING"],
+    "outputs": ["CONDITIONING"],
+    "compatible_models": ["flux"]
+  },
+  "EmptyLatentImage": {
+    "inputs": [],
+    "outputs": ["LATENT"],
+    "compatible_models": ["sd15", "sdxl", "sdxl_turbo", "video"]
+  },
+  "EmptySD3LatentImage": {
+    "inputs": [],
+    "outputs": ["LATENT"],
+    "compatible_models": ["flux", "sd3"]
+  },
   "KSampler": {
-    "inputs": [
-      "model",
-      "positive",
-      "negative",
-      "latent"
-    ],
-    "outputs": [
-      "latent"
-    ],
-    "compatible_models": [
-      "sd15",
-      "sdxl",
-      "flux"
-    ]
+    "inputs": ["MODEL", "CONDITIONING", "CONDITIONING", "LATENT"],
+    "outputs": ["LATENT"],
+    "compatible_models": ["sd15", "sdxl", "flux", "sd3", "video"]
+  },
+  "KSamplerAdvanced": {
+    "inputs": ["MODEL", "CONDITIONING", "CONDITIONING", "LATENT"],
+    "outputs": ["LATENT"],
+    "compatible_models": ["sd15", "sdxl", "flux", "sd3"]
+  },
+  "VAEDecode": {
+    "inputs": ["LATENT", "VAE"],
+    "outputs": ["IMAGE"],
+    "compatible_models": ["sd15", "sdxl", "flux", "sd3", "video"]
+  },
+  "VAEEncode": {
+    "inputs": ["IMAGE", "VAE"],
+    "outputs": ["LATENT"],
+    "compatible_models": ["sd15", "sdxl"]
+  },
+  "VAEEncodeForInpaint": {
+    "inputs": ["IMAGE", "MASK", "VAE"],
+    "outputs": ["LATENT"],
+    "compatible_models": ["sd15", "sdxl"]
+  },
+  "LoraLoader": {
+    "inputs": ["MODEL", "CLIP"],
+    "outputs": ["MODEL", "CLIP"],
+    "compatible_models": ["sd15", "sdxl", "sdxl_turbo", "flux", "sd3"]
+  },
+  "ControlNetLoader": {
+    "inputs": [],
+    "outputs": ["CONTROL_NET"],
+    "compatible_models": ["sd15", "sdxl"]
+  },
+  "ControlNetApplyAdvanced": {
+    "inputs": ["CONDITIONING", "CONDITIONING", "CONTROL_NET"],
+    "outputs": ["CONDITIONING", "CONDITIONING"],
+    "compatible_models": ["sd15", "sdxl"]
+  },
+  "SaveImage": {
+    "inputs": ["IMAGE"],
+    "outputs": [],
+    "compatible_models": ["sd15", "sdxl", "flux", "sd3", "video"]
+  },
+  "PreviewImage": {
+    "inputs": ["IMAGE"],
+    "outputs": [],
+    "compatible_models": ["sd15", "sdxl", "flux", "sd3", "video"]
+  },
+  "VHS_VideoCombine": {
+    "inputs": ["IMAGE"],
+    "outputs": [],
+    "compatible_models": ["video"]
+  },
+  "SaveAnimatedWEBP": {
+    "inputs": ["IMAGE"],
+    "outputs": [],
+    "compatible_models": ["video"]
+  },
+  "LoadAnimateDiffModel": {
+    "inputs": [],
+    "outputs": ["MOTION_MODULE"],
+    "compatible_models": ["video"]
+  },
+  "AnimateDiffLoaderWithContext": {
+    "inputs": ["MODEL", "MOTION_MODULE"],
+    "outputs": ["MODEL"],
+    "compatible_models": ["video"]
+  },
+  "IPAdapterModelLoader": {
+    "inputs": [],
+    "outputs": ["IPADAPTER"],
+    "compatible_models": ["sd15", "sdxl"]
+  },
+  "CLIPVisionLoader": {
+    "inputs": [],
+    "outputs": ["CLIP_VISION"],
+    "compatible_models": ["sd15", "sdxl"]
+  },
+  "IPAdapterApply": {
+    "inputs": ["IPADAPTER", "CLIP_VISION", "IMAGE", "MODEL"],
+    "outputs": ["MODEL"],
+    "compatible_models": ["sd15", "sdxl"]
+  },
+  "LoadImage": {
+    "inputs": [],
+    "outputs": ["IMAGE", "MASK"],
+    "compatible_models": ["sd15", "sdxl", "flux", "sd3", "video"]
+  },
+  "UnetLoaderGGUF": {
+    "inputs": [],
+    "outputs": ["MODEL"],
+    "compatible_models": ["flux"]
+  },
+  "CLIPLoaderGGUF": {
+    "inputs": [],
+    "outputs": ["CLIP"],
+    "compatible_models": ["flux"]
+  },
+  "UpscaleModelLoader": {
+    "inputs": [],
+    "outputs": ["UPSCALE_MODEL"],
+    "compatible_models": ["sd15", "sdxl"]
+  },
+  "ImageUpscaleWithModel": {
+    "inputs": ["UPSCALE_MODEL", "IMAGE"],
+    "outputs": ["IMAGE"],
+    "compatible_models": ["sd15", "sdxl"]
   }
 }

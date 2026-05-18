@@ -52,7 +52,7 @@ You: "Generate a Flux workflow with ControlNet"
    Model family? txt2img or inpaint? LoRAs? ControlNets?
      │
      ▼
-③ AI validates against 23 built-in rules
+③ AI validates against 24 built-in rules
    ⚠️ Flux has no negative prompt → auto-removed
    ⚠️ Inpaint must use VAEEncodeForInpaint → auto-fixed
    ⚠️ InvokeAI node IDs must be UUID → enforced
@@ -259,7 +259,7 @@ tests/
 ```
 knowledge/
 ├── ir_schema.yaml              ← Universal language for describing workflows
-├── rules.yaml                   ← 23 rules (auto-corrects wrong configs)
+├── rules.yaml                   ← 24 rules (auto-corrects wrong configs)
 ├── models/                    ← Each model's quirks
 │   ├── sd15.yaml              ← 512px, 20 steps, dpmpp_2m
 │   ├── sdxl.yaml              ← 1024px, dual CLIP, refiner support

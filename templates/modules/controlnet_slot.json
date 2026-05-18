@@ -1,0 +1,42 @@
+{
+  "name": "controlnet_slot",
+  "description": "ControlNet module — inserts ControlNetLoader + ControlNetApplyAdvanced into the conditioning chain",
+  "insert_after": "positive_encode",
+  "insert_before": "ksampler_positive",
+  "nodes": [
+    {
+      "id_offset": 0,
+      "type": "ControlNetLoader",
+      "pos": [650, 580],
+      "size": {"0": 315, "1": 58},
+      "flags": {},
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {"name": "CONTROL_NET", "type": "CONTROL_NET", "links": [], "slot_index": 0, "shape": 3}
+      ],
+      "properties": {"Node name for S&R": "ControlNet Loader"},
+      "widgets_values": ["{{cn_model}}"]
+    },
+    {
+      "id_offset": 1,
+      "type": "ControlNetApplyAdvanced",
+      "pos": [950, 580],
+      "size": {"0": 315, "1": 86},
+      "flags": {},
+      "mode": 0,
+      "inputs": [
+        {"name": "positive", "type": "CONDITIONING", "link": null},
+        {"name": "negative", "type": "CONDITIONING", "link": null},
+        {"name": "control_net", "type": "CONTROL_NET", "link": null}
+      ],
+      "outputs": [
+        {"name": "CONDITIONING", "type": "CONDITIONING", "links": [], "slot_index": 0, "shape": 3},
+        {"name": "CONDITIONING", "type": "CONDITIONING", "links": [], "slot_index": 1, "shape": 3}
+      ],
+      "properties": {"Node name for S&R": "ControlNet Apply"},
+      "widgets_values": ["{{cn_strength}}", "{{cn_start_percent}}", "{{cn_end_percent}}"]
+    }
+  ],
+  "chain_behavior": "When multiple ControlNets: chain serial — CN1.Apply.positive_out → CN2.Apply.positive_in"
+}

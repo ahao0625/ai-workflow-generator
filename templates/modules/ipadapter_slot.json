@@ -1,0 +1,55 @@
+{
+  "name": "ipadapter_slot",
+  "description": "IPAdapter module — inserts IPAdapterModelLoader + CLIPVisionLoader + IPAdapterApply into model chain",
+  "insert_after": "model_loader_or_last_lora",
+  "insert_before": "ksampler_model",
+  "nodes": [
+    {
+      "id_offset": 0,
+      "type": "IPAdapterModelLoader",
+      "pos": [650, 680],
+      "size": {"0": 315, "1": 58},
+      "flags": {},
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {"name": "IPADAPTER", "type": "IPADAPTER", "links": [], "slot_index": 0, "shape": 3}
+      ],
+      "properties": {"Node name for S&R": "IPAdapter Model"},
+      "widgets_values": ["{{ipadapter_model}}"]
+    },
+    {
+      "id_offset": 1,
+      "type": "CLIPVisionLoader",
+      "pos": [650, 780],
+      "size": {"0": 315, "1": 58},
+      "flags": {},
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {"name": "CLIP_VISION", "type": "CLIP_VISION", "links": [], "slot_index": 0, "shape": 3}
+      ],
+      "properties": {"Node name for S&R": "CLIP Vision"},
+      "widgets_values": ["{{clip_vision_model}}"]
+    },
+    {
+      "id_offset": 2,
+      "type": "IPAdapterApply",
+      "pos": [950, 680],
+      "size": {"0": 315, "1": 86},
+      "flags": {},
+      "mode": 0,
+      "inputs": [
+        {"name": "ipadapter", "type": "IPADAPTER", "link": null},
+        {"name": "clip_vision", "type": "CLIP_VISION", "link": null},
+        {"name": "image", "type": "IMAGE", "link": null},
+        {"name": "model", "type": "MODEL", "link": null}
+      ],
+      "outputs": [
+        {"name": "MODEL", "type": "MODEL", "links": [], "slot_index": 0, "shape": 3}
+      ],
+      "properties": {"Node name for S&R": "IPAdapter Apply"},
+      "widgets_values": ["{{ipadapter_weight}}", "{{ipadapter_weight_type}}", "{{ipadapter_combine_embeds}}"]
+    }
+  ]
+}
